@@ -7155,12 +7155,12 @@ GORF_EXPLODE_SMALL:
         .DB      $00,$03,$00       ; . . . . . . . 3 . . . .
 
 ;*******************************************************************************
-; GORK_UNK
+; GORF_UNK
 ; 4 bytes/row = 16 pixels wide, 17 rows
 ; Sprite bitmap size: 68 bytes ($44)
 ; Object total size: 70 bytes ($46), including 2-byte width/height header
 ;*******************************************************************************
-GORK_UNK:
+GORF_UNK:
         .DB      $04,$11           ; width bytes, height rows
         .DB      $01,$00,$00,$00   ; . . . 1 . . . . . . . . . . . .
         .DB      $00,$40,$00,$00   ; . . . . 1 . . . . . . . . . . .
@@ -7233,12 +7233,12 @@ GORF_EXPLODE:
         .DB      $00,$02,$00,$28,$00,$00 ; . . . . . . . 2 . . . . . 2 2 . . . . . . . . .
 
 ;*******************************************************************************
-; GORK_EXPLODE2
+; GORF_EXPLODE2
 ; 5 bytes/row = 20 pixels wide, 22 rows
 ; Sprite bitmap size: 110 bytes ($6E)
 ; Object total size: 112 bytes ($70), including 2-byte width/height header
 ;*******************************************************************************
-GORK_EXPLODE2:
+GORF_EXPLODE2:
         .DB      $05,$16           ; width bytes, height rows
         .DB      $80,$00,$08,$00,$00 ; 2 . . . . . . . . . 2 . . . . . . . . .
         .DB      $20,$00,$20,$00,$02 ; . 2 . . . . . . . 2 . . . . . . . . . 2
@@ -7264,12 +7264,12 @@ GORK_EXPLODE2:
         .DB      $00,$00,$80,$00,$02 ; . . . . . . . . 2 . . . . . . . . . . 2
 
 ;*******************************************************************************
-; GORK_EXPLODE3
+; GORF_EXPLODE3
 ; 5 bytes/row = 20 pixels wide, 23 rows
 ; Sprite bitmap size: 115 bytes ($73)
 ; Object total size: 117 bytes ($75), including 2-byte width/height header
 ;*******************************************************************************
-GORK_EXPLODE3:
+GORF_EXPLODE3:
         .DB      $05,$17           ; width bytes, height rows
         .DB      $00,$00,$04,$03,$00 ; . . . . . . . . . . 1 . . . . 3 . . . .
         .DB      $00,$30,$41,$40,$30 ; . . . . . 3 . . 1 . . 1 1 . . . . 3 . .
@@ -7296,12 +7296,12 @@ GORK_EXPLODE3:
         .DB      $00,$00,$12,$0C,$00 ; . . . . . . . . . 1 . 2 . . 3 . . . . .
 
 ;*******************************************************************************
-; GORK_EXPLODE4
+; GORF_EXPLODE4
 ; 5 bytes/row = 20 pixels wide, 23 rows
 ; Sprite bitmap size: 115 bytes ($73)
 ; Object total size: 117 bytes ($75), including 2-byte width/height header
 ;*******************************************************************************
-GORK_EXPLODE4:
+GORF_EXPLODE4:
         .DB      $05,$17           ; width bytes, height rows
         .DB      $00,$00,$C0,$00,$00 ; . . . . . . . . 3 . . . . . . . . . . .
         .DB      $00,$08,$00,$30,$00 ; . . . . . . 2 . . . . . . 3 . . . . . .
@@ -7328,12 +7328,12 @@ GORK_EXPLODE4:
         .DB      $00,$01,$08,$40,$00 ; . . . . . . . 1 . . 2 . 1 . . . . . . .
 
 ;*******************************************************************************
-; GORK_UNK2
+; GORF_UNK2
 ; 2 bytes/row = 8 pixels wide, 11 rows
 ; Sprite bitmap size: 22 bytes ($16)
 ; Object total size: 24 bytes ($18), including 2-byte width/height header
 ;*******************************************************************************
-GORK_UNK2:
+GORF_UNK2:
         .DB      $02,$0B           ; width bytes, height rows
         .DB      $00,$00           ; . . . . . . . .
         .DB      $00,$00           ; . . . . . . . .
@@ -7348,12 +7348,12 @@ GORK_UNK2:
         .DB      $00,$00           ; . . . . . . . .
 
 ;*******************************************************************************
-; GORK_UNK3
+; GORF_UNK3
 ; 2 bytes/row = 8 pixels wide, 11 rows
 ; Sprite bitmap size: 22 bytes ($16)
 ; Object total size: 24 bytes ($18), including 2-byte width/height header
 ;*******************************************************************************
-GORK_UNK3:
+GORF_UNK3:
         .DB      $02,$0B           ; width bytes, height rows
         .DB      $41,$01           ; 1 . . 1 . . . 1
         .DB      $10,$44           ; . 1 . . 1 . 1 .
@@ -7368,12 +7368,12 @@ GORK_UNK3:
         .DB      $40,$41           ; 1 . . . 1 . . 1
 
 ;*******************************************************************************
-; GORK_UNK4
+; GORF_UNK4
 ; 2 bytes/row = 8 pixels wide, 12 rows
 ; Sprite bitmap size: 24 bytes ($18)
 ; Object total size: 26 bytes ($1A), including 2-byte width/height header
 ;*******************************************************************************
-GORK_UNK4:
+GORF_UNK4:
         .DB      $02,$0C           ; width bytes, height rows
         .DB      $00,$11           ; . . . . . 1 . 1
         .DB      $40,$00           ; 1 . . . . . . .
@@ -7389,12 +7389,12 @@ GORK_UNK4:
         .DB      $00,$04           ; . . . . . . 1 .
 
 ;*******************************************************************************
-; GORK_UNK5
+; GORF_UNK5
 ; 2 bytes/row = 8 pixels wide, 11 rows
 ; Sprite bitmap size: 22 bytes ($16)
 ; Object total size: 24 bytes ($18), including 2-byte width/height header
 ;*******************************************************************************
-GORK_UNK5:
+GORF_UNK5:
         .DB      $02,$0B           ; width bytes, height rows
         .DB      $C1,$08           ; 3 . . 1 . . 2 .
         .DB      $C1,$0C           ; 3 . . 1 . . 3 .
@@ -7409,12 +7409,12 @@ GORK_UNK5:
         .DB      $08,$11           ; . . 2 . . 1 . 1
 
 ;*******************************************************************************
-; GORK_UNK6
+; GORF_UNK6
 ; 2 bytes/row = 8 pixels wide, 11 rows
 ; Sprite bitmap size: 22 bytes ($16)
 ; Object total size: 24 bytes ($18), including 2-byte width/height header
 ;*******************************************************************************
-GORK_UNK6:
+GORF_UNK6:
         .DB      $02,$0B           ; width bytes, height rows
         .DB      $00,$04           ; . . . . . . 1 .
         .DB      $20,$00           ; . 2 . . . . . .

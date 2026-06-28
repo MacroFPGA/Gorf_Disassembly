@@ -4209,7 +4209,7 @@ _E2MUSIC:       exx
 ;   : SHUTUP EMUSIC E2MUSIC ; -->
 ;##########################################################################################
 
-	        DB      _ENTER
+SHUTUP:	        DB      _ENTER
 	        DW      L1009
                 DW      _E2MUSIC
                 DW      _RETURN
@@ -5282,28 +5282,40 @@ L1595:	dec	l
 	or	b
 	jp	nz,$1646
 	ret
-	pop	hl
+;******************************************************************************************
+; write byte in E to protected memory
+;******************************************************************************************
+_PWB:	pop	hl
 	pop	de
 	call	wpb_bang		; Write byte to protected memory
 	DW	_DSPATCH
 ;******************************************************************************************
-	pop	hl
+; write byte 01 to protected memory
+;******************************************************************************************
+_P1:	pop	hl
 	ld	e,$01
 	call	wpb_bang		; Write byte to protected memory
 	DW	_DSPATCH
 ;******************************************************************************************
-	pop	hl
+; write byte 00 to protected memory
+;******************************************************************************************
+_P0:	pop	hl
 	ld	e,$00
 	call	wpb_bang		; Write byte to protected memory
 	DW	_DSPATCH
 ;******************************************************************************************
+; decrement byte in protected memory
+;******************************************************************************************
+_PDEC:
 	pop	hl
 	ld	e,(hl)
 	dec	e
 	call	wpb_bang		; Write byte to protected memory
 	DW	_DSPATCH
 ;******************************************************************************************
-	pop	hl
+; add to byte in protected memory
+;******************************************************************************************
+_PADD:	pop	hl
 	ld	a,(hl)
 	pop	de
 	add	a,e
@@ -5311,13 +5323,17 @@ L1595:	dec	l
 	call	wpb_bang		; Write byte to protected memory
 	DW	_DSPATCH
 ;******************************************************************************************
-L1689:  	pop	hl
+; increment byte in protected memory
+;******************************************************************************************
+_PINC:  	pop	hl
 	        ld	e,(hl)
 	        inc	e
 	        call	wpb_bang		; Write byte to protected memory
 	        DW	_DSPATCH
 ;******************************************************************************************
-	pop	hl
+; sub from byte in protected memory
+;******************************************************************************************
+_PSUB:	pop	hl
 	ld	a,(hl)
 	pop	de
 	sub	e
@@ -5642,13 +5658,15 @@ WPNOZ:          ld	hl,$D00B
 	exx
 	DW	_DSPATCH
 ;******************************************************************************************
-	exx
+; zero quad bytes of memory
+;******************************************************************************************
+_P0Q:	exx
 	pop	hl
 	ld	b,$03
 	ld	e,$00
-	call	wpb_bang		; Write byte to protected memory
+PQ0:	call	wpb_bang		; Write byte to protected memory
 	inc	hl
-	djnz	$18B3
+	djnz	PQ0
 	exx
 	DW	_DSPATCH
 ;******************************************************************************************
@@ -8780,13 +8798,13 @@ GORF_UNK6:
 	and	$30
 	cp	$30
 	jr	nz,$2F14
-	ld	a,(LD003)
+	ld	a,(CREDITS)
 	and	a
 	ret	z
 	in	a,($10)
 	and	$10
 	jr	z,$2F14
-	ld	a,(LD003)
+	ld	a,(CREDITS)
 	cp	$02
 	ret	c
 	in	a,($10)
@@ -9910,63 +9928,47 @@ GORF_UNK6:
 	nop
 	ld	h,c
 	nop
-	rst	$08
-	ld	l,l
-	nop
-	inc	c
-	ret	nc
-	xor	l
-	jr	$3641
-	nop
-	rra
-	ret	nc
-	xor	l
-	jr	$3647
-	nop
-	nop
-	jr	z,$364B
-	nop
-	add	a,(hl)
-	ret	nc
-	rst	$30
-	nop
-	ld	l,l
-	nop
-	nop
-	ld	h,h
-	ld	l,l
-	nop
-	adc	a,b
-	ret	nc
-	rst	$30
-	nop
-	ld	l,l
-	nop
-	ld	(hl),$D0
-	ld	h,a
-	ld	d,$76
-	nop
-	ld	(bc),a
-	ld	l,l
-	nop
-	ld	($60D0),a
-	ld	d,$6D
-	nop
-	jr	c,$35D0
-	ld	l,a
-	ld	d,$6D
-	nop
-	add	hl,sp
-	ret	nc
-	ld	l,a
-	ld	d,$A7
-	djnz	$3678
-	nop
-	scf
-	ret	nc
-	ld	l,a
-	ld	d,$61
-	nop
+
+	;****************************************************************************************** 
+	; Mike - start game?
+	;****************************************************************************************** 
+	DB      _ENTER
+        DW	_LITword
+        DW      $D00C
+	DW      _P0Q
+        DW	_LITword
+        DW      $D01F
+	DW      _P0Q
+        DW	_LITword
+	DW	$2800
+        DW	_LITword
+	DW	$D086
+	DW	_bang
+        DW	_LITword
+	DW	$6400
+        DW	_LITword
+	DW	$D088
+	DW	_bang
+        DW	_LITword
+	DW	$D036					; current screen
+	DW	_p1
+	DW 	_LITbyte
+	DB	$02
+        DW	_LITword
+	DW	$D032
+	DW	_pwb
+        DW	_LITword
+	DW	$D038
+	DW	_p0
+        DW	_LITword
+	DW	$D039
+	DW	_p0
+	DW	SHUTUP
+        DW	_LITword
+	DW	$D037					; Rank
+	DW	_p0
+	DW 	_RETURN
+
 	di
 	ld	a,$11
 	out	($0E),a
@@ -24171,7 +24173,7 @@ LBF50:          DW      _LITword
                 DW      $166F
                 DW      LB69D           ; Jump
                 DW      $BD4E           ; Jump
-                DW      $10A7
+                DW      SHUTUP
                 DW      _LITword
                 DW      $D002
                 DW      _Bat
@@ -24304,7 +24306,7 @@ LBFB3:          DW	_WPCLEAR	; ??? Large block of code to do with setup
                 DW      LBFEB           ; Data for above ???
                 DW      _LITword
                 DW      LD03C           ; Data for above ???
-                DW      L1689           ; Something about writing to protected memory ???
+                DW      _PINC           ; Something about writing to protected memory ???
                 DW      _LITword
                 DW      LD039
                 DW      _Bat
@@ -24331,7 +24333,7 @@ LBFB3:          DW	_WPCLEAR	; ??? Large block of code to do with setup
 
 WPRAMSTART	EQU	$D000           ; Beginning of Static RAM
 DEMOMODE	EQU	$D001
-LD003   	EQU	$D003
+CREDITS     	EQU	$D003
 LD009           EQU     $D009
 P1FBCTR         EQU	$D032
 P2FBCTR         EQU     $D033

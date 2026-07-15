@@ -5642,18 +5642,24 @@ WPNOZ:      ld      hl,$D00B
             call    $188C
             exx
             DW      _DSPATCH
+
 ;******************************************************************************************
-; zero quad bytes of memory
+; ZEROSCORE - ( ZERO QUAD BYTES OF MEMORY )
+; Description & Context: High-level TERSE word. Clears 3 bytes of memory at the
+;                        address provided on the stack. Specifically used to zero
+;                        out the 3-byte BCD scores for the players. Previously
+;                        labeled as _P0Q.
 ;******************************************************************************************
-_P0Q:       exx
+_ZEROSCORE:  exx
             pop     hl
-            ld      b,$03
-            ld      e,$00
-PQ0:        call    wpb_bang            ; Write byte to protected memory
+            ld      b, $03
+            ld      e, $00
+zeroscore0: call    wpb_bang            ; Write byte to protected memory
             inc     hl
-            djnz    PQ0
+            djnz    zeroscore0
             exx
             DW      _DSPATCH
+
 ;******************************************************************************************
             or      e
             rst     $38
@@ -10187,46 +10193,63 @@ GORF_UNK6:
             ld      h,c
             nop
 
-    ;******************************************************************************************
-    ; Mike - start game?
-    ;******************************************************************************************
-            DB      _ENTER
-            DW      _LITword
-            DW      $D00C
-            DW      _P0Q
-            DW      _LITword
-            DW      $D01F
-            DW      _P0Q
-            DW      _LITword
-            DW      $2800
-            DW      _LITword
-            DW      $D086
-            DW      _bang
-            DW      _LITword
-            DW      $6400
-            DW      _LITword
-            DW      $D088
-            DW      _bang
-            DW      _LITword
-            DW      MISSIONCTR          ; Mission counter
-            DW      _p1
-            DW      _LITbyte
-            DB      $02
-            DW      _LITword
-            DW      P1FBCTR
-            DW      _pwb
-            DW      _LITword
-            DW      PLAYERUP
-            DW      _p0
-            DW      _LITword
-            DW      NPLAYERS
-            DW      _p0
-            DW      SHUTUP
-            DW      _LITword
-            DW      SKILLFACTOR         ; Rank
-            DW      _p0
-            DW      _RETURN
+;#########################################################################################
+; { GORFOS - BLOCK 0228 }
+; ( STARTGAME INITIALIZER )
+; : STARTGAME P1SCR ZEROSCORE P2SCR ZEROSCORE 2800 D086 ! 6400 D088 !
+;  MISSIONCTR WPBONE 2 P1FBCTR WPB! PLAYERUP WPBZERO NPLAYERS WPBZERO
+;  SHUTUP SKILLFACTOR WPBZERO ;
+;#########################################################################################
 
+;******************************************************************************************
+; _STARTGAME - ( STARTGAME INITIALIZER )
+;
+; Description & Context: This high-level TERSE routine completely initializes the game
+; state for a new session. It zeroes out the Player 1 and Player 2 BCD scores, caches
+; their respective screen rendering coordinate offsets ($2800 and $6400), resets the
+; mission counter to 1, provides Player 1 with 2 initial Fire Bases, defaults the
+; active player to Player 1, clears the multi-player flag, silences the audio hardware,
+; and resets the game's dynamic difficulty (SKILLFACTOR).
+;******************************************************************************************
+_STARTGAME:
+            DB      _ENTER              ; Enter TERSE execution
+            DW      _LITword            ;
+            DW      P1SCR               ; / Push address of P1SCR ($D00C)
+            DW      _ZEROSCORE           ; ZEROSCORE (Clears 3 BCD score bytes)
+            DW      _LITword            ;
+            DW      P2SCR               ; / Push address of P2SCR ($D01F)
+            DW      _ZEROSCORE           ; ZEROSCORE (Clears 3 BCD score bytes)
+            DW      _LITword            ;
+            DW      $2800               ; / Push literal $2800 (P1 Score Screen Offset)
+            DW      _LITword            ;
+            DW      $D086               ; / Push address $D086
+            DW      _bang               ; ! (Store $2800 into $D086)
+            DW      _LITword            ;
+            DW      $6400               ; / Push literal $6400 (P2 Score Screen Offset)
+            DW      _LITword            ;
+            DW      $D088               ; / Push address $D088
+            DW      _bang               ; ! (Store $6400 into $D088)
+            DW      _LITword            ;
+            DW      MISSIONCTR          ; / Push address of MISSIONCTR ($D036)
+            DW      _P1                 ; WPBONE (Write Protect 1 - Set Mission to 1)
+            DW      _LITbyte            ;
+            DB      $02                 ; / Push literal $02 (Initial Fire Bases)
+            DW      _LITword            ;
+            DW      P1FBCTR             ; / Push address of P1FBCTR ($D032)
+            DW      _PWB                ; WPB! (Store 2 into Player 1 Fire Base count)
+            DW      _LITword            ;
+            DW      PLAYERUP            ; / Push address of PLAYERUP ($D038)
+            DW      _P0                 ; WPBZERO (Set active player to Player 1)
+            DW      _LITword            ;
+            DW      NPLAYERS            ; / Push address of NPLAYERS ($D039)
+            DW      _P0                 ; WPBZERO (Reset to 1-Player mode)
+            DW      SHUTUP              ; SHUTUP (Silence audio hardware)
+            DW      _LITword            ;
+            DW      SKILLFACTOR         ; / Push address of SKILLFACTOR ($D037)
+            DW      _P0                 ; WPBZERO (Reset Rank/Difficulty)
+            DW      _RETURN             ; ; (End of STARTGAME routine)
+
+;******************************************************************************************
             di
             ld      a,$11
             out     ($0E),a

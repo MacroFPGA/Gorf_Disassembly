@@ -2613,7 +2613,6 @@ _INXMSG:    exx
 ;##########################################################################################
 ;       : ICSPOST INXMSG COUNT SPOST ;
 ;##########################################################################################
-
 ;******************************************************************************************
 ; ----> ICSPOST High-level TERSE word. Takes a message index, converts it to an
 ;               address, counts the string length, and posts it to the screen.
@@ -2628,7 +2627,6 @@ _ICSPOST:   DB      _ENTER              ; Enter TERSE execution
 ;       : GNAME >R 100 5000 408 R> ICSPOST ;
 ;       2 +BLOCK CONTINUED
 ;##########################################################################################
-
 ;******************************************************************************************
 ; ----> GNAME   High-level TERSE word. Sets up the screen coordinates ($100, $5000)
 ;               and the Exp/Mag attributes ($408) for a string, then calls ICSPOST.
@@ -2656,7 +2654,6 @@ _GNAME:     DB      _ENTER              ; Enter TERSE execution
 ;  LABEL SPLP M A MOV, H INX, EXX, drawchar CALL, EXX,
 ;  E DCR, SPLP JRNZ, Y POPX, X POPX, NEXT ASSEMBLE>
 ;##########################################################################################
-
 ;******************************************************************************************
 ; ----> CSPELL  Low-Level Machine Code: Spell a String Centered.
 ;               Pops the string address, calculates the centering offset based on
@@ -2724,7 +2721,6 @@ _SPELL:     DB      _ENTER              ; Enter TERSE execution
 ; ELSE, 0 D MVI, THEN, 30 ADI, EXX, drawchar CALL, EXX, RET,
 ; HEX
 ;##########################################################################################
-
 ;******************************************************************************************
 ; ----> digit   Subroutine: Converts a BCD nibble to an ASCII character and draws it.
 ;               Uses a brilliant trick for leading zeroes: it sets A to $F0, so when
@@ -2758,7 +2754,6 @@ digit3:     add     a,$30               ; Add $30 to convert to ASCII
 ; CC? IFTRUE TIMOR IFEND
 ; DECIMAL -->
 ;##########################################################################################
-
 ;******************************************************************************************
 ; ----> DISPBCD6    TERSE Word: Displays a 6-digit BCD number.
 ;                   It first ORs all 3 bytes together into D to initialize
@@ -2807,7 +2802,6 @@ DGTL:       ld      a,(hl)              ; Read BCD byte
 ;  { : EI>, } { [ } ASM { ] } PSW POP, V, IF, EI, THEN, p { ; }
 ;  DECIMAL -->
 ;##########################################################################################
-
 ;******************************************************************************************
 ; ----> DISPBCD2    TERSE Word: Displays a 2-digit BCD number.
 ;******************************************************************************************
@@ -2842,7 +2836,6 @@ _DISPBCD2:  pop     hl                  ; Pop BCD value directly into HL
 ;  A5 A MVI, 5B OUT,
 ;  E M MOV, H INX, 5B OUT, D M MOV, RET,
 ;##########################################################################################
-
 ;******************************************************************************************
 ; ----> 2wp!    Subroutine: Writes a 16-bit word (DE) to hardware Write-Protected RAM (HL).
 ;               Unlocks the NVRAM by writing $A5 to port $5B before each byte write.
@@ -2860,7 +2853,6 @@ _2wp_bang:  ld      a,$A5
 ; SUBR 2wpb! ( HL = addr, E = value )
 ;  A5 A MVI, 5B OUT, E M MOV, RET,
 ;##########################################################################################
-
 ;******************************************************************************************
 ; ----> 2wpb!   Subroutine: Writes an 8-bit byte (E) to hardware Write-Protected RAM (HL).
 ;******************************************************************************************
@@ -2875,7 +2867,6 @@ _2wpb_bang: ld      a,$A5
 ; SUBR wp! ( HL = addr DE = value ) <DI, H PUSH, 2wp! CALL,
 ;  H POP, EI>, RET,
 ;##########################################################################################
-
 ;******************************************************************************************
 ; ----> wp!     Subroutine: Interrupt-safe 16-bit write to protected NVRAM.
 ;******************************************************************************************
@@ -2896,7 +2887,6 @@ wp_ei_skip: ret                         ; /
 ;  <DI, H PUSH, 2wpb! CALL, H POP, EI>,
 ;  RET,
 ;##########################################################################################
-
 ;******************************************************************************************
 ; ----> wpb!    Subroutine: Interrupt-safe 8-bit write to protected NVRAM.
 ;******************************************************************************************
@@ -2917,7 +2907,6 @@ wpb_ei_skip:ret                         ; /
 ; wpb! CALL, NEXT
 ; -->
 ;##########################################################################################
-
 ;******************************************************************************************
 ; ----> BCDBUMP TERSE Word: Increments a BCD byte directly in protected NVRAM.
 ;******************************************************************************************
@@ -2938,7 +2927,6 @@ _BCDBUMP:   pop     hl                  ; Pop memory address
 ; relabs CALL, C A MOV, MAGIC OUT, B M MOV, ( WRITE IT )
 ; EI, RET,
 ;##########################################################################################
-
 ;******************************************************************************************
 ; ----> UPPOINT Subroutine: Draws a single pixel (point) to the screen buffer.
 ;               Uses the Pattern Board's MAGIC register.
@@ -2971,7 +2959,6 @@ UPPOINT:    di                  ; Disable interrupts
 ; CODE POINT EXX, B POP, H POP, D POP, UPPOINT CALL, EXX, NEXT
 ; DECIMAL -->
 ;##########################################################################################
-
 ;******************************************************************************************
 ; ----> POINT   TERSE Word: Pops X, Y, and Color from the stack and calls UPPOINT
 ;               to draw a single pixel.
@@ -2992,13 +2979,11 @@ _POINT:     exx
 ;         compile-time macros used for music track generation.
 ;         They generate NO executable Z80 machine code in the physical ROM!
 ;##########################################################################################
-
 ;##########################################################################################
 ;   { BLOCK 0074 }
 ;   BTABLE MOTABLE 23 B, 22 B, 20 B, 1E B, 1C B, 1A B, 18 B, 17 B,
 ;   16 B, 15 B, 14 B, 13 B, 12 B, 11 B, 0D B, 0B B, -->
 ;##########################################################################################
-
 MOTABLE:    DB      $23, $22, $20, $1E, $1C, $1A, $18, $17
             DB      $16, $15, $14, $13, $12, $11, $0D, $0B
 
@@ -3012,7 +2997,6 @@ MOTABLE:    DB      $23, $22, $20, $1E, $1C, $1A, $18, $17
 ;   ( 44-54 ) ~ 115 109 104  98  92  86  80  74  68  62  56 ^
 ;   ( 55-63 ) ~  50  44  38  31  25  19  13   6   0         ^
 ;##########################################################################################
-
 sin_table:  DB      $FF, $FF, $FF, $FF, $FE, $FD, $FC, $FB, $FA, $F8, $F7
             DB      $F5, $F3, $F1, $EF, $ED, $EA, $E7, $E5, $E2, $DF, $DC
             DB      $D8, $D5, $D1, $CE, $CA, $C6, $C2, $BE, $B9, $B5, $B1
@@ -3025,7 +3009,6 @@ sin_table:  DB      $FF, $FF, $FF, $FF, $FE, $FD, $FC, $FB, $FA, $F8, $F7
 ; SUBR sin ( pass <, 0<= < <= 63, in E ) 0 D MVI,
 ; 0 sin-table H LXI, D DAD, M A MOV, RET,
 ;##########################################################################################
-
 ;******************************************************************************************
 ; ----> sin     Subroutine: Sine wave table lookup.
 ; IN:   E = Index (0 to 63)
@@ -3046,7 +3029,6 @@ sin:        ld      d,$00               ; Clear D to make DE a clean 16-bit offs
 ;  M E MOV, H INX, M D MOV, XCHG, ( leave in HL )
 ;  L MUSPC Y STX, H MUSPC 1+ Y STX, ( store )   RET,
 ;##########################################################################################
-
 _PCJUMP:    ld      e,(hl)
             inc     hl
             ld      d,(hl)
@@ -3063,7 +3045,6 @@ _PCJUMP:    ld      e,(hl)
 ;  18 A MVI, C SUB, SOUNDBOX Y SUBX, NEG, A C MOV, E OUTP,
 ;  THEN, THEN, A XRA, RET,
 ;##########################################################################################
-
 portout:    ld      e,a
             ld      a,$17
             cp      c
@@ -3084,7 +3065,6 @@ portout:    ld      e,a
 ; SUBR babs ( byte absolute value )
 ;  7 A BIT, 0<>, IF, NEG, 7 A RES, THEN, RET,
 ;##########################################################################################
-
 babs:       bit     7,a
             jp      z,$0B5E
             neg
@@ -3095,7 +3075,6 @@ babs:       bit     7,a
 ; This code seems to be missing ??? Marked it for future reference
 ; CODE BABS H POP, L A MOV, babs CALL, A L MOV, H PUSH, NEXT
 ;##########################################################################################
-
 _BABS       EQU     $
 
 ;##########################################################################################
@@ -3105,7 +3084,6 @@ _BABS       EQU     $
 ; A ANA, B A MOV, 0<>, IF, RRC, RRC, 33 ANI, THEN,
 ; EXX, RET,
 ;##########################################################################################
-
 _HALFVOLS:  exx
             ld      b,a
             ld      a,(DEMOMODE)
@@ -3126,8 +3104,8 @@ _HALFVOLS:  exx
 ;  A RAMBLEFLAG Y STX, ( stop ramble ) 1 MST Y MVIX,
 ;  THEN, THEN, RET,
 ;##########################################################################################
-
-_LIMITCOUNT:    ld  a,(iy+$10)
+_LIMITCOUNT:
+            ld  a,(iy+$10)
             or      a
             jp      z,$0B84
             dec     a
@@ -3157,7 +3135,6 @@ _LIMITCOUNT:    ld  a,(iy+$10)
 ; >>>>> ALSO, MUSPC SEEM TO BE ZERO - UNLESS IT IS AN EQUATE SET TO ZERO.
 ;
 ;##########################################################################################
-
             inc     bc
             ld      hl,$0000
             add     hl,de
@@ -3194,8 +3171,8 @@ _LIMITCOUNT:    ld  a,(iy+$10)
 ;  B POP, L A MOV, portout CALL, H POP, 3 D LXI, D DAD, ( MUSPC )
 ;  A XRA, RET,
 ;##########################################################################################
-
-_RANDOMNOTES:    push    hl
+_RANDOMNOTES:
+            push    hl
             ld      d,$00
             ld      e,(hl)
             push    de
@@ -3215,6 +3192,7 @@ _RANDOMNOTES:    push    hl
             add     hl,de
             xor     a
             ret
+
 ;##########################################################################################
 ; SUBR LOADTIMER M A MOV, A NOTETIMER Y STX, H INX, ( A XRA,
 ;  A COMPDURATION Y STX, ) 1 ORI, RET,
@@ -3243,7 +3221,6 @@ _QUITJUMP:  ret
 ;  ELSE, Y PUSHX, EXX, D POP, emusic CALL, 1 ORI, THEN, RET,
 ; -->
 ;##########################################################################################
-
 _QUITYET:   dec     (iy+$07)
             jp      z,$0BE7
             ld      l,(iy+$02)
@@ -3256,7 +3233,6 @@ _QUITYET:   dec     (iy+$07)
             call    $0B86
             or      $01
             ret
-
 
 ;##########################################################################################
 ; { BLOCK 0074 }
@@ -3271,8 +3247,6 @@ _QUITYET:   dec     (iy+$07)
 ;  M A MOV, H INX, A RAMBLETIMER Y STX,
 ;  A TIMEBASE Y STX, 1 A MVI, A RAMBLEFLAG Y STX, A DCR, RET,
 ;##########################################################################################
-
-
 _RAMBLIN:   xor     a
             ld      (iy+$09),a
             ld      a,(hl)
@@ -3297,7 +3271,6 @@ _RAMBLIN:   xor     a
 ; SUBR RAMPIN' 1 A MVI, RAMBLESTORES JMP,
 ; -->
 ;##########################################################################################
-
 _RAMPIN:    ld      a,$01
             jp      $0BF2
 
@@ -3309,7 +3282,6 @@ _RAMPIN:    ld      a,$01
 ;  M A MOV, H INX, A MOVALUE Y STX,
 ;  A OUTP, A XRA, RET
 ;##########################################################################################
-
             ld      a,(iy+$04)
             sub     $08
             ld      c,a
@@ -3323,15 +3295,14 @@ _RAMPIN:    ld      a,$01
 ;##########################################################################################
 ; SUBR RAMBLE-ON 1 A MVI, A RAMBLEFLAG Y STX, A XRA, RET,
 ;##########################################################################################
-
             ld      a,$01
             ld      (iy+$0a),a
             xor     a
             ret
+
 ;##########################################################################################
 ; SUBR RAMBLE-OFF A XRA, A RAMBLEFLAG Y STX, RET,
 ;##########################################################################################
-
             xor     a
             ld      (iy+$0a),a
             ret
@@ -3343,12 +3314,12 @@ _RAMPIN:    ld      a,$01
             ld      (iy+$10),a
             xor     a
             ret
+
 ;##########################################################################################
 ; SUBR LIMITRAMBLE ( set up LIMCOUNTER )
 ;  1 A MVI, A RAMBLEFLAG Y STX, M A MOV, H INX,
 ;  A LIMCOUNTER Y STX, A XRA, RET,
 ;##########################################################################################
-
             ld      a,(hl)
             inc     hl
             ld      (iy+$1a),a
@@ -3368,7 +3339,6 @@ _RAMPIN:    ld      a,$01
 ;  0F0 ANI, E ORA, H INX, portout JMP,
 ; -->
 ;##########################################################################################
-
             rrca
             ld      c,a
             ld      a,(hl)
@@ -3388,7 +3358,6 @@ _RAMPIN:    ld      a,$01
 ;  M A MOV, H INX, A BIGOFASTEP Y STX, M A MOV, H INX,
 ;  A STEPTIMEBASE Y STX, A STEPTIMER Y STX, A XRA, RET,
 ;##########################################################################################
-
             ld      a,(hl)
             inc     hl
             ld      (iy+$1e),a
@@ -3424,7 +3393,6 @@ _RAMPIN:    ld      a,$01
 ;  M A MOV, H INX, A LOWSTEP Y STX, M A MOV, H INX, A LOW# Y STX,
 ;  A LOWCOUNTER Y STX, A XRA, RET,
 ;##########################################################################################
-
             ld      a,(hl)
             inc     hl
             ld      (iy+$22),a
@@ -3443,7 +3411,6 @@ _RAMPIN:    ld      a,$01
 ;  M A MOV, H INX, A HIGHSTEP Y STX, M A MOV, H INX,
 ;  A HIGH# Y STX, A HIGHCOUNTER Y STX, A XRA, RET,
 ;##########################################################################################
-
             ld      a,(hl)
             inc     hl
             ld      (iy+$11),a
@@ -3462,7 +3429,6 @@ _RAMPIN:    ld      a,$01
 ;  A TBSTEP Y STX, M A MOV, H INX, A TBTB Y STX, A TBTIMER Y STX,
 ;  A XRA, RET,
 ;##########################################################################################
-
             ld      a,(hl)
             inc     hl
             ld      (iy+$15),a
@@ -3502,7 +3468,6 @@ opport:     rrca
 ;       M A MOV, 0F ANI,
 ;       HALFVOLS CALL, E ORA, H INX, A MCTRACKER Y STX, portout JMP,
 ;##########################################################################################
-
 mcmovin:    rrca
             ld      c,a
             ld      a,(hl)
@@ -3520,7 +3485,6 @@ mcmovin:    rrca
 ;       SUBR NOISEPORT ( 17H )
 ;        RRC, A C MOV, M A MOV, H INX, A NOVALUE Y STX, portout JMP,
 ;##########################################################################################
-
 noiseport:  rrca
             ld      c,a
             ld      a,(hl)
@@ -3535,19 +3499,14 @@ noiseport:  rrca
 ;        M A MOV, H INX, A PANTIMEBASE Y STX,
 ;        A PANTIMER Y STX, FF PANCOUNTER Y MVIX, A XRA, RET, )
 ;##########################################################################################
-
 soundmovin: ret                         ; Only a ret here
-
 
 ;##########################################################################################
 ;       SUBR PANLIMITCOUNTIN' ( 19 ) RET, -->
 ;       ( M A MOV, H INX, A PANCOUNTER Y STX,
 ;        PANTIMEBASE Y A LDX, A PANTIMER Y STX, A XRA, RET, )
 ;##########################################################################################
-
 panlimitcountin:    ret                 ; Only a ret here
-
-
 
 ;##########################################################################################
 ;       { BLOCK 0078 }
@@ -3562,7 +3521,6 @@ panlimitcountin:    ret                 ; Only a ret here
 ;        M A MOV, H INX, A VOLTIMEBASE Y STX,
 ;        1 VOLTIMER Y MVIX, A XRA, RET,
 ;##########################################################################################
-
 volmovin:   ld      a,(hl)
             call    $0B5F
             inc     hl
@@ -3586,7 +3544,6 @@ volmovin:   ld      a,(hl)
 ;        1 SYNCMO Y MVIX, ( turn on THUMPER-sync ) 3 A MVI, THUMPCOUNTER
 ;        STA, M A MOV, H INX, A STARTMC Y STX, A XRA, RET,
 ;##########################################################################################
-
 mohittin:   ld      (iy+$2c),$01
             ld      a,$03
             ld      ($D0B0),a
@@ -3605,7 +3562,6 @@ mohittin:   ld      (iy+$2c),$01
 ;        8 MOTRACKER Y MVIX, A XRA, RET, ( zero )
 ;       -->
 ;##########################################################################################
-
 musicin:    ret
 
 
@@ -4121,7 +4077,6 @@ L1009:      exx                         ; TERSE CODE
 ;    emusic CALL, ( musicoverun flag is zeroed last ) NEXT
 ;   ( *** ALWAYS CALL E2MUSIC AS AN INIT IN PROGRAM *** )
 ;##########################################################################################
-
 _E2MUSIC:   exx
             ld      de,$D0E1
             ld      hl,$002F
@@ -4137,7 +4092,6 @@ _E2MUSIC:   exx
 ;   CODE B2MUSIC H POP, Y PUSHX,
 ;    0 MUSIC-BARRAY-2 Y LXIX, bmusic CALL, Y POPX, NEXT
 ;##########################################################################################
-
             pop     hl
             push    iy
             ld      iy,$D0E1
@@ -4150,7 +4104,6 @@ _E2MUSIC:   exx
 ;   CODE P2MUSIC H POP, Y PUSHX,
 ;    0 MUSIC-BARRAY-2 Y LXIX, pmusic CALL, Y POPX, NEXT
 ;##########################################################################################
-
             pop     hl
             push    iy
             ld      iy,$D0E1
@@ -4163,7 +4116,6 @@ _E2MUSIC:   exx
 ;   CODE M2MUSIC H POP, D POP, Y PUSHX,
 ;    0 MUSIC-BARRAY-2 Y LXIX, mmusic CALL, Y POPX, NEXT
 ;##########################################################################################
-
             pop     hl
             pop     de
             push    iy
@@ -4177,8 +4129,6 @@ _E2MUSIC:   exx
 ;   CODE MP2MUSIC H POP, D POP, Y PUSHX,
 ;    0 MUSIC-BARRAY-2 Y LXIX, mpmusic CALL, Y POPX, NEXT
 ;##########################################################################################
-
-
             pop     hl
             pop     de
             push    iy
@@ -4190,7 +4140,6 @@ _E2MUSIC:   exx
 ;##########################################################################################
 ;   : SHUTUP EMUSIC E2MUSIC ; -->
 ;##########################################################################################
-
 SHUTUP:     DB      _ENTER
             DW      L1009
             DW      _E2MUSIC
@@ -4209,7 +4158,6 @@ SHUTUP:     DB      _ENTER
 ;  CODE BZERO H POP, 0 M MVI, NEXT
 ;  -->
 ;##########################################################################################
-
 _BONE:      pop     hl
             ld      (hl),$01
             DW      _DSPATCH
@@ -4307,7 +4255,6 @@ speaklink:  in      a,($10)
 ; HEX SUBR speak SETTINGS IN, 8 ANI, speaklink JNZ, 0C000 JMP,
 ; .ABS
 ;##########################################################################################
-
 speak:      in      a,($13)
             and     $08
             jp      nz,speaklink
@@ -4317,7 +4264,6 @@ speak:      in      a,($13)
 ; CODE SPEAK D POP, speak CALL, NEXT
 ; DECIMAL -->
 ;########################################################################################
-
 _SPEAK:     pop     de
             call    speak
             DW      _DSPATCH
@@ -4342,7 +4288,6 @@ _SPEAK:     pop     de
 ;##########################################################################################
 
 ; Not sure about the label name. Is it "phone"???
-
 L10E7:      ld      a,($D111)
             or      a
             jp      nz,L1158            ;???
@@ -4409,7 +4354,6 @@ L1158:      dec     a                   ; ???
 
 L115C:      ret
 
-
 ;******************************************************************************************
 ;
 ; The sentences that Gorf speaks is the data in the next section. The first byte
@@ -4436,8 +4380,6 @@ L115C:      ret
 ;       { : HI } 80 OR { ; } { : UP } 40 OR { ; }
 ;
 ;******************************************************************************************
-
-
 ;##########################################################################################
 ;       DATA 'INSERT TALK PRIM
 ;       PA1 I0 N S ER T PA1 K0 O1 UH3 I3 AY N N PA1 ENDPRIM
@@ -4600,7 +4542,8 @@ SPK_CAPT:   DB      $08
 ;       K0 ER UP N UP AH2 L PA1 ENDPRIM
 ;##########################################################################################
 
-SPK_COLONEL:DB      $06
+SPK_COLONEL:
+            DB      $06
             DB      $19, $7A, $4D, $08, $18, $3E
 
 ;##########################################################################################
@@ -4608,7 +4551,8 @@ SPK_COLONEL:DB      $06
 ;       pD J0 EH2 UP N UP ER UH3 L PA1 ENDPRIM
 ;##########################################################################################
 
-SPK_GENERAL:DB      $08
+SPK_GENERAL:
+            DB      $08
             DB      $1E, $1A, $41, $4D, $3A, $23, $18, $3E
 
 ;##########################################################################################
@@ -4616,7 +4560,8 @@ SPK_GENERAL:DB      $08
 ;       W O UP R UP AY UP Y1 UP EH3 R PA1 ENDPRIM
 ;##########################################################################################
 
-SPK_WARRIOR:DB      $08
+SPK_WARRIOR:
+            DB      $08
             DB      $2D, $66, $6B, $61, $62, $00, $2B, $3E
 
 ;##########################################################################################
@@ -4624,7 +4569,8 @@ SPK_WARRIOR:DB      $08
 ;       UH1 V EH1 UP EH3 UP N UP N pD J0 ER PA1 ENDPRIM
 ;##########################################################################################
 
-SPK_AVENGER:DB      $0A
+SPK_AVENGER:
+            DB      $0A
             DB      $32, $0F, $42, $40, $4D, $0D, $1E, $1A, $3A, $3E
 
 ;##########################################################################################
@@ -4702,7 +4648,7 @@ SPK_AVENGER:DB      $0A
 ; 'SPACE SPEAK RKTBL @ ;
 ;#########################################################################
 
-RKTBL:      DW      SPK_CADET,SPK_CAPT,SPK_COLONEL,SPK_GENERAL,SPK_WARRIOR,SPK_AVENGER
+RKTBL:      DW      SPK_CADET, SPK_CAPT, SPK_COLONEL, SPK_GENERAL, SPK_WARRIOR, SPK_AVENGER
 
 _GETRANK:   DB      _ENTER              ; Enter TERSE execution
             DW      _LITword            ;
@@ -7094,8 +7040,8 @@ SMALBASE:
 ;*****************************************************************************************
 ; GORF - ( GORF )
 ; Description & Context: This is the large Gorf enemy sprite, defined in QUAD
-; (base-4) multi-colored format. In your disassembly, this was previously
-; labeled as GORF_BOUNCE_DOWN.
+; (base-4) multi-colored format.
+;
 ; Set Relationships: Paired with GORFB. Together, these two frames are used
 ; to animate the Gorf expanding and contracting as it moves.
 ;*****************************************************************************************
@@ -7141,8 +7087,8 @@ GORF:
 ;*****************************************************************************************
 ; GORFB - ( GORFB )
 ; Description & Context: The second frame of the large Gorf enemy sprite, defined in
-; QUAD (base-4) multi-colored format. In your disassembly, this was previously
-; labeled as GORF_BOUNCE_UP.
+; QUAD (base-4) multi-colored format.
+;
 ; Set Relationships: Paired with GORF. Together, these two frames are used to animate
 ; the Gorf expanding and contracting as it moves.
 ;*****************************************************************************************
@@ -7178,8 +7124,8 @@ GORFB:
 ;*****************************************************************************************
 ; GORF2 - ( GORF 2 AND GORF 3 )
 ; Description & Context: This is a smaller animation frame for the Gorf enemy,
-; defined in QUAD (base-4) multi-colored format. In your disassembly, this was
-; previously labeled as GORF_EXTREME_SMALL.
+; defined in QUAD (base-4) multi-colored format.
+;
 ; Set Relationships: Part of the Gorf enemy scaling animation set (GORF1 through
 ; GORF5). It is specifically grouped with GORF3 in Block 0169.
 ;*****************************************************************************************

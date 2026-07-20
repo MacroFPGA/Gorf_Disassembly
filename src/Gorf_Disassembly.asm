@@ -1326,7 +1326,7 @@ _SCAN:      ld      d,b
             dec     hl
             push    hl
             ld      hl,$0001
-            jp      SCAN_END
+            jp      scan_end
 scan_false: ld      hl,$0000
 scan_end:   push    hl
             ld      b,d
@@ -1830,7 +1830,7 @@ _RELABS:    exx
             pop     hl                  ; ( Y )
             pop     de                  ; ( X )
             pop     bc                  ; ( exp/mag )
-            call    relabs              ; Calls RAM vector (allows Cocktail mode swapping!)
+            call    RELABS              ; Calls RAM vector (allows Cocktail mode swapping!)
             push    bc                  ; ( exp/mag+shf )
             push    hl                  ; ( scradr )
             exx
@@ -2485,7 +2485,7 @@ drawchar1:  ld      l,a                 ; \
             push    hl                  ;  |  Push Y back
             push    de                  ; /   Push X back (Peeks at X and Y for relabs)
 
-            call    relabs              ; Call RAM vector to calculate absolute screen address
+            call    RELABS              ; Call RAM vector to calculate absolute screen address
 
             ld      de,$0602            ; D (Height) = 6 lines, E (Width) = 2 bytes
             call    write               ; Call pattern transfer routine
@@ -2947,7 +2947,7 @@ UPPOINT:    di                  ; Disable interrupts
             rrca                ; / Shift right 2 times
             ld      b,a         ; Save shifted value in B (FUDGE B)
             ld      c,$20       ; Set C to $20 for relabs calculation
-            call    relabs      ; Convert relative X/Y to absolute screen address
+            call    RELABS      ; Convert relative X/Y to absolute screen address
             ld      a,c         ; Get Magic properties back
             out     ($0C),a     ; MAGIC OUT (Hardware port $0C)
             ld      (hl),b      ; Write the pixel to the calculated screen address
@@ -10015,13 +10015,13 @@ _setrel:    DB      _ENTER
             DW     _0BRANCH             ; branch if zero to set normal vectors
             DW     SETREL0
             DW     _LITword
-            DW     COCKREL
+            DW     cockrel
             DW     _1                   ; get address for 1st element of byte array        
             DW     _BARRAY 
             DW     RELABS
             DW     _bang                ; write address of COCKREL
             DW     _LITword
-            DW     COCKFF
+            DW     cockff
             DW     _1
             DW     _BARRAY
             DW     FFRELABS             ; do the same for the FFRELABS jump
@@ -10029,13 +10029,13 @@ _setrel:    DB      _ENTER
             DW     _BRANCH              ; finished cocktail vectors so branch to end
             DW     SETREL1
 SETREL0:    DW     _LITword             ; same as above, but normal vectors
-            DW     NORREL
+            DW     norrel
             DW     _1
             DW     _BARRAY
             DW     RELABS               ; set to NORREL
             DW     _bang
             DW     _LITword
-            DW     FFNORREL
+            DW     ffnorrel
             DW     _1
             DW     _BARRAY
             DW     FFRELABS
@@ -13522,7 +13522,7 @@ L8000:      and     l
             or      l
             ret     nz
             ld      de,$0300
-            call    RND
+            call    rnd
             ld      de,$0180
             add     hl,de
             ld      ($D09F),hl
@@ -15117,12 +15117,12 @@ L8000:      and     l
             ld      de,$0010
             push    de
             ld      de,$0010
-            call    RND
+            call    rnd
             pop     de
             add     hl,de
             push    hl
             ld      de,$2000
-            call    RND
+            call    rnd
             ld      de,$1800
             add     hl,de
             pop     de
@@ -15139,14 +15139,14 @@ L8000:      and     l
             cp      $04
             jp      c,$8F4B
             ld      de,$4800
-            call    RND
+            call    rnd
             pop     de
             pop     bc
             ld      a,r
             and     $03
             jp      $8F5A
             ld      de,$8C00
-            call    RND
+            call    rnd
             pop     de
             pop     bc
             ld      bc,$0200

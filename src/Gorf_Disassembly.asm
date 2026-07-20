@@ -9997,49 +9997,49 @@ GORF_UNK6:
 ;                        normal or cocktail mode
 ;******************************************************************************************
 _setrel:    DB      _ENTER
-            DW     _LITBYTE
+            DW     _LITbyte
             DB      $C3                 ; Z80 opcode for JP
             DW     _0                   ; get address for 0th element of byte array
             DW     _BARRAY
             DW     RELABS		; at the RELABS jump address
-            DW     _BBANG 		; and write the JP command
-            DW     _LITBYTE		; now do the same for the FFRELABS jump
+            DW     _Bbang 		; and write the JP command
+            DW     _LITbyte		; now do the same for the FFRELABS jump
             DB      $C3
             DW     _0
             DW     _BARRAY
             DW     FFRELABS
-            DW     _BBANG
-            DW     _LITWORD             ; get the value of COCKTAIL
+            DW     _Bbang
+            DW     _LITword             ; get the value of COCKTAIL
             DW     COCKTAIL
-            DW     _BAT
+            DW     _Bat
             DW     _0BRANCH             ; branch if zero to set normal vectors
             DW     SETREL0
-            DW     _LITWORD
+            DW     _LITword
             DW     COCKREL
             DW     _1                   ; get address for 1st element of byte array        
             DW     _BARRAY 
             DW     RELABS
-            DW     _BANG                ; write address of COCKREL
-            DW     _LITWORD
+            DW     _bang                ; write address of COCKREL
+            DW     _LITword
             DW     COCKFF
             DW     _1
             DW     _BARRAY
             DW     FFRELABS             ; do the same for the FFRELABS jump
-            DW     _BANG                ; this time writing address of COCKFF
+            DW     _bang                ; this time writing address of COCKFF
             DW     _BRANCH              ; finished cocktail vectors so branch to end
             DW     SETREL1
-SETREL0:    DW     _LITWORD             ; same as above, but normal vectors
+SETREL0:    DW     _LITword             ; same as above, but normal vectors
             DW     NORREL
             DW     _1
             DW     _BARRAY
             DW     RELABS               ; set to NORREL
-            DW     _BANG
-            DW     _LITWORD
+            DW     _bang
+            DW     _LITword
             DW     FFNORREL
             DW     _1
             DW     _BARRAY
             DW     FFRELABS
-            DW     _BANG                ; set to FFNORREL
+            DW     _bang                ; set to FFNORREL
 SETREL1:    DW     _RETURN
 
 ;******************************************************************************************

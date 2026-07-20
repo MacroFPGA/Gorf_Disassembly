@@ -9990,81 +9990,59 @@ GORF_UNK6:
             djnz    $3518
             exx
             DW      _DSPATCH
+
 ;******************************************************************************************
-            rst     $08
-            halt
-            nop
-            jp      _0
-            adc     a,b
-            nop
-            add     a,b
-            ret     nc
-            cp      $00
-            halt
-            nop
-            jp      _0
-            adc     a,b
-            nop
-            add     a,e
-            ret     nc
-            cp      $00
-            ld      l,l
-            nop
-            dec     sp
-            ret     nc
-            ret     p
-            nop
-            jp      pe,$6103
-            dec     (hl)
-            ld      l,l
-            nop
-            ld      bc,$9E06
-            nop
-            adc     a,b
-            nop
-            add     a,b
-            ret     nc
-            rst     $30
-            nop
-            ld      l,l
-            nop
-            djnz    $355B
-            sbc     a,(hl)
-            nop
-            adc     a,b
-            nop
-            add     a,e
-            ret     nc
-            rst     $30
-            nop
-            jp      po,$7903
-            dec     (hl)
-            ld      l,l
-            nop
-            ret     z
-            dec     b
-            sbc     a,(hl)
-            nop
-            adc     a,b
-            nop
-            add     a,b
-            ret     nc
-            rst     $30
-            nop
-            ld      l,l
-            nop
-            or      d
-            dec     b
-            sbc     a,(hl)
-            nop
-            adc     a,b
-            nop
-            add     a,e
-            ret     nc
-            rst     $30
-            nop
-            ld      h,c
-            nop
+; setrel - set indirect memory pointers
+; Description & Context: Set RELABS and FFRELABS to correct jump address for 
+;                        normal or cocktail mode
+;******************************************************************************************
+_setrel:    DB      _ENTER
+            DW     _LITBYTE
+            DB      $C3                 ; Z80 opcode for JP
+            DW     _0                   ; get address for 0th element of byte array
+            DW     _BARRAY
+            DW     RELABS		; at the RELABS jump address
+            DW     _BBANG 		; and write the JP command
+            DW     _LITBYTE		; now do the same for the FFRELABS jump
+            DB      $C3
+            DW     _0
+            DW     _BARRAY
+            DW     FFRELABS
+            DW     _BBANG
+            DW     _LITWORD             ; get the value of COCKTAIL
+            DW     COCKTAIL
+            DW     _BAT
+            DW     _0BRANCH             ; branch if zero to set normal vectors
+            DW     SETREL0
+            DW     _LITWORD
+            DW     COCKREL
+            DW     _1                   ; get address for 1st element of byte array        
+            DW     _BARRAY 
+            DW     RELABS
+            DW     _BANG                ; write address of COCKREL
+            DW     _LITWORD
+            DW     COCKFF
+            DW     _1
+            DW     _BARRAY
+            DW     FFRELABS             ; do the same for the FFRELABS jump
+            DW     _BANG                ; this time writing address of COCKFF
+            DW     _BRANCH              ; finished cocktail vectors so branch to end
+            DW     SETREL1
+SETREL0:    DW     _LITWORD             ; same as above, but normal vectors
+            DW     NORREL
+            DW     _1
+            DW     _BARRAY
+            DW     RELABS               ; set to NORREL
+            DW     _BANG
+            DW     _LITWORD
+            DW     FFNORREL
+            DW     _1
+            DW     _BARRAY
+            DW     FFRELABS
+            DW     _BANG                ; set to FFNORREL
+SETREL1:    DW     _RETURN
+
+;******************************************************************************************
             rst     $08
             out     ($04),a
             ld      e,l

@@ -1,6 +1,6 @@
 # Gorf — Z80 Source Reconstruction
 
-This repository contains the disassembly, source code reconstruction, and technical documentation for the classic arcade game **Gorf** (Midway Manufacturing, 1981).
+This repository contains the disassembly, source code reconstruction, and technical documentation for the classic arcade game **Gorf** (Midway, 1981).
 
 The goal of this project is to produce an accurate, buildable Z80 assembly codebase for preservation, study, and reverse engineering, preserving historical TERSE context while adhering to modern readability standards.
 
@@ -8,9 +8,11 @@ The goal of this project is to produce an accurate, buildable Z80 assembly codeb
 
 ## 🛠️ Build & Tools
 
-* **Assembler:** [`zmac 1.3`](https://ballyalley.com/ml/ml_tools/Zmac13_win32.zip) *(Preferred)* or [`zmac 18oct2022`](http://48k.ca/zmac.html)
+* **Assembler:** `zmac` (Z80 Macro Cross Assembler)
+  * **[zmac v1.3](https://ballyalley.com/ml/ml_tools/Zmac13_win32.zip) — Preferred**
+  * [zmac v18oct2022](http://48k.ca/zmac.html)
 * **Target Hardware:** Midway / Bally Astrocade Hardware
-* **Primary Source:** `src/Gorf_Disassembly`
+* **Primary Source:** `src/gorf_disassembly.asm`
 
 ### Building the ROMs
 To assemble the source code into binary ROMs, run:
@@ -24,6 +26,7 @@ To assemble the source code into binary ROMs, run:
 
 ```text
 ├── src/                    # Z80 Assembly source files
+│   └── gorf_disassembly.asm
 ├── tools/                  # Build scripts, helpers, and sync utilities
 ├── Docs/                   # Technical references & Info on the specific game
 │   ├── Z80_Coding_Style.md
@@ -42,5 +45,5 @@ To maintain visual and structural consistency across all arcade disassembly repo
 | **These formatting standards are meant for guidance, not to force you into a coding straitjacket.** While a consistent layout is highly encouraged as a best practice, you are free to make exceptions without consequence. If adhering to these specific columns compromises the readability of a complex routine or data block, or you just don't like the look of the code,  take the liberty to break the rule. **Readability and accuracy always come first.** |
 
 
-* **[Z80 Coding Style & Layout](Shared_Docs/Z80_Coding_Style.md)** — Column alignments, spacing, and comment conventions.
-* **[TERSE Naming Rules](Shared_Docs/TERSE_Naming_Rules.md)** — Capitalization, label length, and internal jump conventions.
+* **Z80 Coding Style & Layout** — Column alignments, spacing, and comment conventions.
+* **TERSE Naming Rules**        — Capitalization, label length, and internal jump conventions.

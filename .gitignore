@@ -9,6 +9,7 @@ tools/
 *.bat
 *.tmp
 *.py
+*Ω*
 
 # Ignore all .txt files by default...
 *.txt

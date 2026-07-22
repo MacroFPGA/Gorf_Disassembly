@@ -4092,7 +4092,7 @@ _E2MUSIC:   exx
 ;   CODE B2MUSIC H POP, Y PUSHX,
 ;    0 MUSIC-BARRAY-2 Y LXIX, bmusic CALL, Y POPX, NEXT
 ;##########################################################################################
-            pop     hl
+_B2MUSIC:   pop     hl
             push    iy
             ld      iy,$D0E1
             call    $0FAC
@@ -4104,7 +4104,7 @@ _E2MUSIC:   exx
 ;   CODE P2MUSIC H POP, Y PUSHX,
 ;    0 MUSIC-BARRAY-2 Y LXIX, pmusic CALL, Y POPX, NEXT
 ;##########################################################################################
-            pop     hl
+P2MUSIC:    pop     hl
             push    iy
             ld      iy,$D0E1
             call    $0FC2
@@ -4116,7 +4116,7 @@ _E2MUSIC:   exx
 ;   CODE M2MUSIC H POP, D POP, Y PUSHX,
 ;    0 MUSIC-BARRAY-2 Y LXIX, mmusic CALL, Y POPX, NEXT
 ;##########################################################################################
-            pop     hl
+_M2MUSIC:   pop     hl
             pop     de
             push    iy
             ld      iy,$D0E1
@@ -4129,7 +4129,7 @@ _E2MUSIC:   exx
 ;   CODE MP2MUSIC H POP, D POP, Y PUSHX,
 ;    0 MUSIC-BARRAY-2 Y LXIX, mpmusic CALL, Y POPX, NEXT
 ;##########################################################################################
-            pop     hl
+_MP2MUSIC:  pop     hl
             pop     de
             push    iy
             ld      iy,$D0E1
@@ -4385,6 +4385,7 @@ L115C:      ret
 ;       PA1 I0 N S ER T PA1 K0 O1 UH3 I3 AY N N PA1 ENDPRIM
 ;##########################################################################################
 
+SPK_INSERT: 
             DB      $0F                 ; Length of phrase
             DB      $3E, $27, $0D, $1F, $3A, $2A, $3E    ; INSERT
             DB      $19, $35, $23, $09, $21, $0D, $0D, $3E    ; COIN
@@ -4395,6 +4396,7 @@ L115C:      ret
 ;       EH1 UP M UP P AH1 I1 R PA1 ENDPRIM
 ;##########################################################################################
 
+SPK_GORF:   
             DB      $17                 ; Length of phrase
             DB      $3E, $15, $4B, $69, $2E, $4C, $38, $72    ; GORF ???
             DB      $1C, $04, $35, $6B, $5D, $29, $06, $0D
@@ -4405,6 +4407,7 @@ L115C:      ret
 ;       S P pA1 I3 UP Y UP S UP ENDPRIM
 ;##########################################################################################
 
+ SPK_SPACE: 
             DB      $06
             DB      $1F, $25, $06, $49, $69, $5F
 
@@ -4414,6 +4417,7 @@ L115C:      ret
 ;       AH2 N UP UH UP TH UP ER G UP pAE1 L UH1 K0 UP S Y PA1 ENDPRIM
 ;##########################################################################################
 
+SPK_CONQUER:
             DB      $1B
             DB      $1C, $04, $75, $6B, $5D, $69, $06, $0D
             DB      $1F, $19, $15, $0D, $59, $7A, $08, $4D
@@ -4426,6 +4430,7 @@ L115C:      ret
 ;       I1 UP Y1 UP pD Y V AH1 UP U1 ER K0 UP O1 UP UH3 I3 pE1 N S PA1
 ;##########################################################################################
 
+SPK_TRY:
             DB      $1E
             DB      $2A, $6B, $48, $4B, $69, $03, $32, $5C
             DB      $42, $09, $0D, $3E, $3E, $15, $4B, $62
@@ -4437,6 +4442,7 @@ L115C:      ret
 ;       PA1 L AW UP NG UP L I1 UP V UP G UP DT UP O1 UP O1 UP R R pF pF
 ;##########################################################################################
 
+SPK_LONG:
             DB      $0F
             DB      $3E, $18, $7D, $54, $18, $4B, $4F, $5C
             DB      $44, $75, $75, $2B, $2B, $1D, $1D
@@ -4448,6 +4454,7 @@ L115C:      ret
 ;       UH1 T pAE EH3 UP K0 UP PA0 UH1 T pAE EH3 UP K0 UP PA1 ENDPRIM
 ;##########################################################################################
 
+SPK_ROBOTS:
             DB      $1E
             DB      $5C, $44, $75, $6B, $5D, $7C, $01, $0D
             DB      $6B, $75, $77, $0E, $15, $23, $2A, $1F
@@ -4460,6 +4467,7 @@ L115C:      ret
 ;       ENDPRIM
 ;##########################################################################################
 
+SPK_BADMOVE:
             DB      $09
             DB      $0E, $2E, $42, $5E, $4C, $68, $37, $0F, $3E
 
@@ -4468,6 +4476,7 @@ L115C:      ret
 ;       H UP AH1 UP H AH1 UP H AH1 UP H AH1 PA1 ENDPRIM
 ;##########################################################################################
 
+SPK_HAHA:
             DB      $09
             DB      $5B, $55, $1B, $55, $1B, $55, $1B, $15, $3E
 
@@ -4478,6 +4487,7 @@ L115C:      ret
 ;       PA0 R O1 UP U1 UP pB AH1 T S PA1 ENDPRIM
 ;##########################################################################################
 
+SPK_ESCAPE:
             DB      $23
             DB      $22, $0B, $77, $77, $19, $6F, $4D, $32
             DB      $2A, $03, $02, $1F, $19, $45, $7C, $65
@@ -4490,6 +4500,7 @@ L115C:      ret
 ;       G AH1 EH3 UP T UP Y1 UP I3 U1 PA1 ENDPRIM
 ;##########################################################################################
 
+SPK_GOTYOU:
             DB      $08
             DB      $1C, $15, $40, $6A, $62, $09, $37, $3E
 
@@ -4499,6 +4510,7 @@ L115C:      ret
 ;       SH UP AH1 UP UH3 T PA1 ENDPRIM
 ;##########################################################################################
 
+SPK_NICE:
             DB      $0B
             DB      $0D, $23, $48, $69, $5F, $43, $51, $55, $23, $2A, $3E
 
@@ -4507,6 +4519,7 @@ L115C:      ret
 ;       T U UP pB UP pAE UP EH3 pD PA1 ENDPRIM
 ;##########################################################################################
 
+SPK_TOOBAD:
             DB      $07
             DB      $2A, $68, $4E, $6E, $00, $1E, $3E
 
@@ -4516,6 +4529,7 @@ L115C:      ret
 ;       P R UP I1 UP S UP I3 UP N EH3 R S PA1 ENDPRIM -->
 ;##########################################################################################
 
+SPK_PRIS:
             DB      $18
             DB      $1C, $04, $75, $6B, $1D, $29, $06, $0D
             DB      $1F, $2A, $60, $59, $0D, $66, $25, $6B
@@ -4526,7 +4540,8 @@ L115C:      ret
 ;       K0 UH pD EH2 UP T UP PA1 ENDPRIM
 ;##########################################################################################
 
-SPK_CADET:  DB      $06
+SPK_CADET:  
+            DB      $06
             DB      $19, $33, $1E, $41, $6A, $3E
 
 ;##########################################################################################
@@ -4534,7 +4549,8 @@ SPK_CADET:  DB      $06
 ;       K0 pAE1 UP EH3 UP P UP T I3 N PA1 ENDPRIM
 ;##########################################################################################
 
-SPK_CAPT:   DB      $08
+SPK_CAPT:   
+            DB      $08
             DB      $19, $6F, $40, $65, $2A, $09, $0D, $3E
 
 ;##########################################################################################
@@ -4579,6 +4595,7 @@ SPK_AVENGER:
 ;       P R UH2 M O UP T UP EH3 pD PA0 T IU U1 PA0 ENDPRIM -->
 ;##########################################################################################
 
+SPK_PROMOTE:
             DB      $19
             DB      $22, $36, $77, $77, $1B, $2F, $40, $4F
             DB      $0E, $00, $42, $4D
@@ -4592,7 +4609,9 @@ SPK_AVENGER:
 ;       PA0 Y IU UP U1 UP U1 UP UH R PA1 ENDPRIM
 ;##########################################################################################
 
-            DB      $1B, $1F, $33, $0C, $1C, $32, $18
+SPK_SOME:
+            DB      $1B
+            DB      $1F, $33, $0C, $1C, $32, $18
             DB      $2E, $19, $2A, $0B, $19, $03, $1E, $3C
             DB      $5D, $42, $0D, $1E, $3A, $03, $29, $76
             DB      $77, $77, $33, $2B, $3E
@@ -4603,6 +4622,7 @@ SPK_AVENGER:
 ;       ENDPRIM
 ;##########################################################################################
 
+SPK_BITE:
             DB      $0C
             DB      $0E, $08, $09, $62, $6A, $38, $73, $5E
             DB      $73, $1F, $2A, $3E
@@ -4614,6 +4634,7 @@ SPK_AVENGER:
 ;       ENDPRIM
 ;##########################################################################################
 
+SPK_HAIL:
             DB      $20
             DB      $3D, $18, $1B, $46, $61, $18, $38, $33
             DB      $1F, $37, $65, $6B, $7C, $0C, $3E, $1C
@@ -4626,6 +4647,7 @@ SPK_AVENGER:
 ;       SH I0 P PA0 pD UP pE1 UP S UP T R O1 I1 Y1 pD PA1 ENDPRIM
 ;##########################################################################################
 
+SPK_ENEMY:
             DB      $1A
             DB      $15, $0D, $33, $38, $6B, $6B, $03, $02
             DB      $0D, $02, $0C, $29, $11, $27, $25, $03
@@ -4637,7 +4659,9 @@ SPK_AVENGER:
 ;  Y O UP R UP EH N pD PA0 pD R AW1 S N I0 UP R ENDPRIM
 ;##########################################################################################
 
-            DB      $0E, $29, $66, $6B, $3B, $0D, $1E, $03
+SPK_BETCHA:
+            DB      $0E
+            DB      $29, $66, $6B, $3B, $0D, $1E, $03
             DB      $1E, $2B, $13, $1F, $0D, $67, $2B
 
 ;#########################################################################
@@ -4658,7 +4682,7 @@ _GETRANK:   DB      _ENTER              ; Enter TERSE execution
             DB      $05                 ; / Push literal byte 5 (Max Rank = Avenger)
             DW      _MIN                ; MIN (Cap the rank at 5)
             DW      _LITword            ;
-            DW      $1185               ; / Push address $1185 ('SPACE TALK PRIM)
+            DW      SPK_SPACE           ; / Push address $1185 ('SPACE TALK PRIM)
             DW      _SPEAK              ; SPEAK (Speak the primitive at $1185)
             DW      _ARRAY              ; ARRAY (Use the capped rank to index into a word array...)
             DW      RKTBL               ; / ...located at base address $1326 (RKTBL)
@@ -4666,42 +4690,28 @@ _GETRANK:   DB      _ENTER              ; Enter TERSE execution
             DW      _RETURN             ; ; (Return, leaving the rank's speech address on the stack)
 
 ;******************************************************************************************
-            DW      $115D
-            DW      $116D
 
-
-;
-
-            rst     $00
-            ld      de,$115D
-            inc     d
-            add     a,(hl)
-            djnz    $1368
-            ld      b,$10
-            inc     a
-            ld      bc,$1303
-            ld      e,(hl)
-            ld      (de),a
-            sub     (hl)
-            ld      de,$167E
-            rst     $38
-            dec     d
-            rrca
-            ld      bc,$0440
-            ld      (bc),a
-            ld      d,(hl)
-            inc     de
+L134C:      DW      SPK_INSERT
+            DW      SPK_GORF
+            DW      SPK_LONG
+            DW      SPK_INSERT
 
 ;******************************************************************************************
+; Music data ?
+;******************************************************************************************
+L1354:      DB      $14,$86,$10,$10,$06,$10,$3C,$01
+            DB      $03,$13,$5E,$12,$96,$11,$7E,$16
+            DB      $FF,$15,$0F,$01,$40,$04,$02,$56
+            DB      $13
 
-            rst     $08
-            ld      l,l
-            nop
-            ld      d,h
-            inc     de
-            ld      l,l
-            djnz    $13D6
-            nop
+W_136D:
+            DB      _ENTER
+            DW      _LITword
+            DW      L1354
+            DW      _B2MUSIC
+            DW      _RETURN
+
+;******************************************************************************************
             ld      a,($D08B)
             and     a
             ret     nz
@@ -4735,92 +4745,77 @@ _GETRANK:   DB      _ENTER              ; Enter TERSE execution
             ld      a,$01
             ld      ($D08B),a
             jp      $10D7
-            adc     a,h
-            ld      de,$11A8
-            ld      a,(bc)
-            ld      (de),a
-            ld      l,l
-            ld      de,$12DB
 
 ;******************************************************************************************
-
-            rst     $08
-            halt
-            nop
-            ld      (bc),a
-            ld      e,b
-            dec     b
-            jp      pe,$DB03
-            inc     de
-            ld      l,l
-            nop
-            ld      b,e
-            ld      (de),a
-            jp      po,$DF03
-            inc     de
-            ld      l,l
-            nop
-            adc     a,$12
-            pop     hl
-            djnz    $1414
-            inc     de
-            pop     hl
-            djnz    $145C
-            nop
-            dec     b
-            ld      e,b
-            dec     b
-            sub     e
-            nop
-            cp      a
-            inc     de
-            jp      (hl)
-            nop
-            pop     hl
-            djnz    $1454
-            nop
-            nop
-            ld      (de),a
-            call    m,$1712
-            inc     de
-            or      $11
-            ld      l,$12
-            or      d
-            ld      (de),a
-
+; Speak random phrase
 ;******************************************************************************************
 
-            rst     $08
-            ld      l,l
-            nop
+GENERIC:    DW      SPK_CONQUER
+            DW      SPK_TRY
+            DW      SPK_ESCAPE
+            DW      SPK_GORF
+            DW      SPK_HAIL
 
-            ld      hl,($76D1)
-            nop
+_SPKGENERIC:
+            DB      _ENTER
+            DW      _LITbyte
+            DB      $02
+            DW      _RND
+            DW      _0BRANCH
+            DW      generic0
+            DW      _LITword
+            DW      SPK_TOOBAD
+            DW      _BRANCH
+            DW      generic1
+generic0:   DW      _LITword
+            DW      SPK_BITE
+generic1:   DW      _SPEAK
+            DW      _GETRANK
+            DW      _SPEAK
+            DW      _LITbyte
+            DB      $05
+            DW      _RND
+            DW      _ARRAY
+            DW      GENERIC
+            DW      _at
+            DW      _SPEAK
+            DW      _RETURN
 
-            ld      b,$62
-            dec     b
-            and     h
-            nop
-            sbc     a,(hl)
-            nop
-            jp      c,$EA01
-            inc     bc
-            ld      ($9314),hl
-            nop
-            call    p,$E913
-            nop
-            pop     hl
-            djnz    $144F
-            inc     de
-            jp      po,$2803
-            inc     d
-            sub     e
-            nop
-            call    p,$E913
-            nop
-            pop     hl
-            djnz    $148C
-            nop
+;******************************************************************************************
+; Speak random insult
+;******************************************************************************************
+
+INSULTS:    DW      SPK_HAHA
+            DW      SPK_ENEMY
+            DW      SPK_BETCHA
+            DW      SPK_BADMOVE
+            DW      SPK_GOTYOU
+            DW      SPK_SOME
+
+_SPKINSULT:
+            DB      _ENTER
+            DW      _LITword
+            DW      $D12A
+            DW      _LITbyte
+            DB      $06
+            DW      _UNEQRND
+            DW      _DUP
+            DW      _1
+            DW      _gt
+            DW      _0BRANCH
+            DW      insult0
+            DW      _ARRAY
+            DW      INSULTS
+            DW      _at
+            DW      _SPEAK
+            DW      _GETRANK
+            DW      _BRANCH
+            DW      insult1
+insult0:    DW      _ARRAY
+            DW      INSULTS
+            DW      _at
+insult1:    DW      _SPEAK
+            DW      _RETURN
 
 ;******************************************************************************************
 ; { BLOCK 0111 }
@@ -10013,7 +10008,7 @@ _setrel:    DB      _ENTER
             DW     COCKTAIL
             DW     _Bat
             DW     _0BRANCH             ; branch if zero to set normal vectors
-            DW     SETREL0
+            DW     setrel0
             DW     _LITword
             DW     cockrel
             DW     _1                   ; get address for 1st element of byte array        
@@ -10027,8 +10022,8 @@ _setrel:    DB      _ENTER
             DW     FFRELABS             ; do the same for the FFRELABS jump
             DW     _bang                ; this time writing address of COCKFF
             DW     _BRANCH              ; finished cocktail vectors so branch to end
-            DW     SETREL1
-SETREL0:    DW     _LITword             ; same as above, but normal vectors
+            DW     setrel1
+setrel0:    DW     _LITword             ; same as above, but normal vectors
             DW     norrel
             DW     _1
             DW     _BARRAY
@@ -10040,7 +10035,7 @@ SETREL0:    DW     _LITword             ; same as above, but normal vectors
             DW     _BARRAY
             DW     FFRELABS
             DW     _bang                ; set to FFNORREL
-SETREL1:    DW     _RETURN
+setrel1:    DW     _RETURN
 
 ;******************************************************************************************
             rst     $08

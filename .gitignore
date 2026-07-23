@@ -1,6 +1,6 @@
 # Ignored Folders
 _Work_Area/
-tools/
+tools/*
 
 # Compiled ROM binaries, lists, objects, and scripts
 *.bin
@@ -9,10 +9,15 @@ tools/
 *.bat
 *.tmp
 *.py
+*.txt
 *Ω*
 
-# Ignore all .txt files by default...
-*.txt
+# Exceptions for required tools (These WILL be tracked)
+!tools/slice.ps1
+!tools/zmac.exe
+
+# Exceptions for required scripts (These WILL be tracked)
+!src/build.bat
 
 # OS generated hidden files
 .DS_Store

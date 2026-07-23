@@ -8,26 +8,30 @@ The goal of this project is to produce an accurate, buildable Z80 assembly codeb
 
 ## 🛠️ Build & Tools
 
-* **Assembler:** `zmac` (Z80 Macro Cross Assembler)
-  * **[zmac v1.3](https://ballyalley.com/ml/ml_tools/Zmac13_win32.zip) — Preferred**
-  * [zmac v18oct2022](http://48k.ca/zmac.html)
-* **Target Hardware:** Midway / Bally Astrocade Hardware
-* **Primary Source:** `src/gorf_disassembly.asm`
+* **Assembler:** [zmac v1.3](https://ballyalley.com/ml/ml_tools/Zmac13_win32.zip) (Z80 Macro Cross Assembler)
+* **Primary Source:** `src/Gorf_Disassembly.asm`
 
 ### Building the ROMs
-To assemble the source code into binary ROMs, run:
-```bash
-**Coming Soon**
+To assemble the source code into MAME-ready ROMs, navigate to the `src/` directory and run the build script:
+
+```cmd
+cd src
+build.bat
 ```
+
+The script will automatically compile the assembly and deposit the final, ready-to-play binaries (`gorf-a.bin` through `gorf-h.bin`) into a new `roms/` folder in your project root.
 
 ---
 
 ## 📁 Repository Structure
 
 ```text
-├── src/                    # Z80 Assembly source files
-│   └── gorf_disassembly.asm
+├── src/                    # Z80 Assembly source files & Build batch file
+│   ├── Gorf_Disassembly.asm
+│   └── build.bat
 ├── tools/                  # Build scripts, helpers, and sync utilities
+│   ├── slice.ps1           # 48KB memory canvas and ROM slicing script
+│   └── zmac.exe            # Z80 Macro Cross Assembler
 ├── Docs/                   # Technical references & Info on the specific game
 │   ├── Z80_Coding_Style.md
 │   └── TERSE_Naming_Rules.md  

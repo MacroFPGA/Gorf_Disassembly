@@ -4690,8 +4690,10 @@ _GETRANK:   DB      _ENTER              ; Enter TERSE execution
             DW      _RETURN             ; ; (Return, leaving the rank's speech address on the stack)
 
 ;******************************************************************************************
+; Phrases used in attract mode
+;******************************************************************************************
 
-L134C:      DW      SPK_INSERT
+phrases:    DW      SPK_INSERT
             DW      SPK_GORF
             DW      SPK_LONG
             DW      SPK_INSERT
@@ -4701,8 +4703,9 @@ L134C:      DW      SPK_INSERT
 ;******************************************************************************************
 L1354:      DB      $14,$86,$10,$10,$06,$10,$3C,$01
             DB      $03,$13,$5E,$12,$96,$11,$7E,$16
-            DB      $FF,$15,$0F,$01,$40,$04,$02,$56
-            DB      $13
+            DB      $FF,$15,$0F,$01,$40,$04
+
+AM_FX:      DB      $02,$56,$13
 
 W_136D:
             DB      _ENTER
@@ -4712,39 +4715,41 @@ W_136D:
             DW      _RETURN
 
 ;******************************************************************************************
-            ld      a,($D08B)
+; say something if joystick moved in attract mode
+;******************************************************************************************
+AM_TALK:    ld      a,(AMBUSY)          ; Still playing FX / Talk from before
             and     a
-            ret     nz
-            call    $061F
-            and     $0F
-            ret     z
+            ret     nz                  ; Yes, so exit
+            call    gj                  ; Read joystick, lower 4 bits, active high
+            and     $0F                 ; Mask out directions
+            ret     z                   ; Return if nothing active.
             ld      a,$01
             ld      ($D0AF),a
             ld      a,($D124)
             and     a
-            jp      nz,$13A8
+            jp      nz,amtalk0
             ld      hl,($D125)
             ld      de,($D127)
             sbc     hl,de
-            jp      nz,$13A8
+            jp      nz,amtalk0
             ld      a,$3B
             ld      ($D111),a
-            ld      hl,$136A
+            ld      hl,AM_FX
             ld      iy,$D0B1
             call    $0FC2
-            ld      a,r
+amtalk0:    ld      a,r
             and     $03
             rlca
             ld      e,a
             ld      d,$00
-            ld      hl,$134C
+            ld      hl,phrases
             add     hl,de
             ld      e,(hl)
             inc     hl
             ld      d,(hl)
-            ld      a,$01
-            ld      ($D08B),a
-            jp      $10D7
+            ld      a,$01               ; Set flag to say we are busy
+            ld      (AMBUSY),a
+            jp      speak
 
 ;******************************************************************************************
 ; Speak random phrase
@@ -4868,9 +4873,13 @@ _CODE:      ld      de,$4000
             DW      _DSPATCH
 
 ;******************************************************************************************
-            DB      _ENTER
+; Terse routine just returns - why ?
+;******************************************************************************************
+
+DONULL:     DB      _ENTER
             DW      _RETURN
 
+;******************************************************************************************
             DB      _ENTER
             DW      _LITword
             DW      $0100
@@ -4889,32 +4898,26 @@ _CODE:      ld      de,$4000
             DW      _DSPATCH
 ;******************************************************************************************
 
-            rst     $08
-            ld      e,l
-            inc     d
-            sbc     a,(hl)
-            nop
-            halt
-            nop
-            ex      af,af'
-            ret     p
-            ld      (bc),a
-            halt
-            nop
-            call    z,_LITbyte
-            ld      a,(bc)
-            ret     p
-            ld      (bc),a
-            halt
-            nop
-            dec     hl
-            halt
-            nop
-            add     hl,bc
-            ret     p
-            ld      (bc),a
-            ld      h,c
-            nop
+W_1476:
+            DB      _ENTER
+            DW      DONULL		; do nothing ?
+            DW      _1                  ; OUT $01 to port $08 (Hi-Res)
+            DW      _LITbyte
+            DB      $08
+            DW      _OUTP
+            DW      _LITbyte
+            DB      $CC
+            DW      _LITbyte
+            DB      $0A                 ; OUT $CC to port $0A (Vert Blank)
+            DW      _OUTP
+            DW      _LITbyte
+            DB      $2B
+            DW      _LITbyte
+            DB      $09
+            DW      _OUTP               ; OUT $2B to port $09 (pallette split)
+            DW      _RETURN
+;******************************************************************************************
+
             ld      b,(ix+$1c)
             ld      c,(ix+$1b)
             ld      d,(ix+$0e)
@@ -24617,6 +24620,7 @@ COMBO1          EQU     $D042                   ; Combo 1 Vector (2 bytes)
 ;******************************************************************************************
 RELABS          EQU     $D080                   ; relabs pointer
 FFRELABS        EQU     $D083                   ; ffrelabs pointer
+AMBUSY          EQU     $D08B                   ; Used for speech when joystick moved 
 RND_SEED        EQU     $D0AB                   ; 32-bit Random Seed RND#0
 
 ;******************************************************************************************

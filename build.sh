@@ -5,16 +5,16 @@ readonly ROM_SIZE=$((0x1000))
 readonly SOURCE_NAME="Gorf_Disassembly.asm"
 readonly ZIP_NAME="gorf.zip"
 
-readonly SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-readonly REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
-readonly BUILD_DIR="$SCRIPT_DIR/zout"
+readonly REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+readonly SOURCE_DIR="$REPO_ROOT/src"
+readonly BUILD_DIR="$SOURCE_DIR/zout"
 readonly ROMS_DIR="$REPO_ROOT/roms"
-readonly SOURCE_FILE="$SCRIPT_DIR/$SOURCE_NAME"
+readonly SOURCE_FILE="$SOURCE_DIR/$SOURCE_NAME"
 readonly SOURCE_STEM="${SOURCE_NAME%.asm}"
 readonly CIM_FILE="$BUILD_DIR/$SOURCE_STEM.cim"
 readonly LST_FILE="$BUILD_DIR/$SOURCE_STEM.lst"
 readonly ZIP_FILE="$ROMS_DIR/$ZIP_NAME"
-readonly SC01_FILE="$SCRIPT_DIR/sc01.bin"
+readonly SC01_FILE="$ROMS_DIR/sc01.bin"
 
 readonly -a ROM_NAMES=(
   "gorf-a.bin"
@@ -95,7 +95,7 @@ assemble_source() {
   log "      zmac: $ZMAC_BIN"
 
   (
-    cd -- "$SCRIPT_DIR"
+    cd -- "$SOURCE_DIR"
     "$ZMAC_BIN" --oo cim,lst "$SOURCE_NAME"
   ) || fail "zmac failed. Review the assembler output above."
 

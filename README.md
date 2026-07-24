@@ -11,7 +11,7 @@ The goal of this project is to produce an accurate, buildable Z80 assembly codeb
 * **Assembler:** [zmac v1.3](https://ballyalley.com/ml/ml_tools/Zmac13_win32.zip) (Z80 Macro Cross Assembler)
 * **Primary Source:** `src/Gorf_Disassembly.asm`
 
-### Building the ROMs
+### Building the ROMs ---> Windows 10 / 11
 To assemble the source code into MAME-ready ROMs, navigate to the `src/` directory and run the build script:
 
 ```cmd

@@ -1,6 +1,5 @@
 # Ignored Folders
 _Work_Area/
-tools/*
 cfg/
 
 # Compiled ROM binaries, lists, objects, and scripts
@@ -15,11 +14,11 @@ cfg/
 *.exe
 *Ω*
 
-# Exceptions for required tools (These WILL be tracked)
-!tools/slice.ps1
-!tools/zmac.exe
+# Exceptions for required tools
+!tools/
+!tools/.gitkeep
 
-# Exceptions for required scripts (These WILL be tracked)
+# Exceptions for required scripts
 !src/build.bat
 
 # OS generated hidden files

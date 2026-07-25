@@ -1,5 +1,5 @@
 @echo off
-setlocal enabledelayedexpansion
+setlocal
 
 cd /d "%~dp0"
 
@@ -44,7 +44,38 @@ if %ERRORLEVEL% neq 0 (
 )
 
 echo [3/4] Splitting image into Gorf ROMs...
-powershell -ExecutionPolicy Bypass -File tools\slice.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+    "$inputFile = 'src\zout\Gorf_Disassembly.hex';" ^
+    "$outputDir = 'roms';" ^
+    "if (-not (Test-Path $inputFile)) { Write-Error 'Input HEX file missing.'; exit 1 };" ^
+    "$memory = [byte[]]::new(0xC000);" ^
+    "for ($i = 0; $i -lt 0xC000; $i++) { $memory[$i] = 0xFF };" ^
+    "$hexLines = Get-Content $inputFile;" ^
+    "foreach ($line in $hexLines) {" ^
+    "    if (-not $line.StartsWith(':')) { continue };" ^
+    "    $byteCount = [Convert]::ToByte($line.Substring(1, 2), 16);" ^
+    "    $address   = [Convert]::ToUInt16($line.Substring(3, 4), 16);" ^
+    "    $recordType= [Convert]::ToByte($line.Substring(7, 2), 16);" ^
+    "    if ($recordType -eq 0) {" ^
+    "        for ($i = 0; $i -lt $byteCount; $i++) {" ^
+    "            $dataByte = [Convert]::ToByte($line.Substring(9 + ($i * 2), 2), 16);" ^
+    "            $targetAddr = $address + $i;" ^
+    "            if ($targetAddr -lt 0xC000) { $memory[$targetAddr] = $dataByte };" ^
+    "        }" ^
+    "    }" ^
+    "};" ^
+    "$romMap = [ordered]@{" ^
+    "    'gorf-a.bin' = 0x0000..0x0FFF; 'gorf-b.bin' = 0x1000..0x1FFF;" ^
+    "    'gorf-c.bin' = 0x2000..0x2FFF; 'gorf-d.bin' = 0x3000..0x3FFF;" ^
+    "    'gorf-e.bin' = 0x8000..0x8FFF; 'gorf-f.bin' = 0x9000..0x9FFF;" ^
+    "    'gorf-g.bin' = 0xA000..0xAFFF; 'gorf-h.bin' = 0xB000..0xBFFF;" ^
+    "};" ^
+    "foreach ($romName in $romMap.Keys) {" ^
+    "    $slice = $memory[$romMap[$romName]];" ^
+    "    [System.IO.File]::WriteAllBytes((Join-Path $outputDir $romName), $slice);" ^
+    "    Write-Host ('  -> Wrote ' + $romName + ' (' + $slice.Length + ' bytes)');" ^
+    "}"
+
 if %ERRORLEVEL% neq 0 (
     echo ERROR: ROM slicing failed.
     pause

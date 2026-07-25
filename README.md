@@ -35,9 +35,6 @@ To select a specific assembler executable outside the default search locations:
 set ZMAC=C:\path\to\zmac.exe
 build.bat
 ```
-
-The script will automatically compile the assembly and deposit the final, ready-to-play binaries (gorf-a.bin through gorf-h.bin) and the packaged gorf.zip into the roms/ folder in your project root.
-
 ---
 
 ### Building the ROMs ---> Linux
@@ -63,9 +60,10 @@ ZMAC=/path/to/zmac ./build.sh
 
 The script will automatically compile the assembly and deposit the final, ready-to-play binaries (gorf-a.bin through gorf-h.bin) and the packaged gorf.zip into the roms/ folder in your project root.
 
-#### Optional SC-01 speech ROM
+--- 
 
-The SC-01 speech ROM is not part of the reconstructed program source. If a file named `sc01.bin` exists in `roms/`, the Linux build automatically includes it in `roms/gorf.zip`. If the file is absent, the build continues and packages only the eight Gorf program ROMs.
+### Optional SC-01 speech ROM
+The SC-01 speech ROM is not part of the reconstructed program source. If a file named `sc01.bin` exists in `roms/`, the build script automatically includes it in `roms/gorf.zip`. If the file is absent, the build continues and packages only the eight Gorf program ROMs.
 
 ---
 

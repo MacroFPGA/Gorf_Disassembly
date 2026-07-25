@@ -12,6 +12,7 @@ cfg/
 *.tmp
 *.py
 *.txt
+*.exe
 *Ω*
 
 # Exceptions for required tools (These WILL be tracked)

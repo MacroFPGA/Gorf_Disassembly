@@ -1,8 +1,8 @@
 # tools/slice.ps1
 # Reads Intel HEX, pads to 48KB in memory, and slices into 4KB MAME ROMs.
 
-$inputFile = "Gorf_Disassembly.hex"
-$outputDir = "..\roms"
+$inputFile = "src\zout\Gorf_Disassembly.hex"
+$outputDir = "roms"
 
 if (-not (Test-Path $inputFile)) {
     Write-Error "Input HEX file '$inputFile' not found!"

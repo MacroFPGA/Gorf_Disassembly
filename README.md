@@ -2,24 +2,30 @@
 
 This repository contains the disassembly, source code reconstruction, and technical documentation for the classic arcade game **Gorf** (Midway, 1981).
 
-The goal of this project is to produce an accurate, buildable Z80 assembly codebase for preservation, study, and reverse engineering, preserving historical TERSE context while adhering to modern readability standards.
-
 ---
 
 ## 🛠️ Build & Tools
 
-* **Assembler:** [zmac v1.3](https://ballyalley.com/ml/ml_tools/Zmac13_win32.zip) (Z80 Macro Cross Assembler)
+* **Assembler:** [zmac v1.3](http://48k.ca/zmac.html) (Z80 Macro Cross Assembler)
+  * [Windows Binary (`zmac.exe`)](https://ballyalley.com/ml/ml_tools/Zmac13_win32.zip)
+  * [Linux Source (`Zmac13.tar.gz`)](https://ballyalley.com/ml/ml_tools/Zmac13.tar.gz)
 * **Primary Source:** `src/Gorf_Disassembly.asm`
 
 ### Building the ROMs ---> Windows 10 / 11
-To assemble the source code into MAME-ready ROMs, navigate to the `src/` directory and run the build script:
+To assemble the source code into MAME-ready ROMs, run the build script from the root directory:
 
 ```cmd
-cd src
 build.bat
 ```
 
 The script will automatically compile the assembly and deposit the final, ready-to-play binaries (`gorf-a.bin` through `gorf-h.bin`) into a new `roms/` folder in your project root.
+
+To select a specific assembler executable:
+
+```cmd
+set ZMAC=C:\path\to\zmac.exe
+build.bat
+```
 
 ### Building the ROMs ---> Linux
 
@@ -42,7 +48,7 @@ To select a specific assembler executable:
 ZMAC=/path/to/zmac ./build.sh
 ```
 
-The script will automatically compile the assembly and deposit the final, ready-to-play binaries (`gorf-a.bin` through `gorf-h.bin`) and the packaged gorf.zip into the `roms/` folder in your project root.
+The script will automatically compile the assembly and deposit the final, ready-to-play binaries (gorf-a.bin through gorf-h.bin) and the packaged gorf.zip into the roms/ folder in your project root.
 
 #### Optional SC-01 speech ROM
 
@@ -53,24 +59,16 @@ The SC-01 speech ROM is not part of the reconstructed program source. If a file 
 ## Repository Structure
 
 ```text
-|-- docs/                   # Technical references and game information
-|   |-- Votrax Speech/
-|   |-- TERSE_Naming_Rules.md
-|   `-- Z80_Coding_Style.md
-|-- roms/                   # Gorf ROM images and generated gorf.zip
-|   |-- gorf-a.bin ... gorf-h.bin
-|   `-- sc01.bin            # Optional SC-01 speech ROM
-|-- src/                    # Z80 source
-|   |-- cfg/
-|   |-- zout/               # zmac build output
-|   |-- Gorf_Disassembly.asm
-|   `-- build.bat
-|-- tools/                  # Build helpers and assembler binaries
-|   |-- slice.ps1           # Windows Intel HEX-to-ROM slicing script
-|   `-- zmac.exe            # Windows Z80 Macro Cross Assembler
-|-- build.sh                # Linux ROM build script
-|-- README.md               # Game-specific overview (this file)
-`-- .gitignore
+├── build.bat                  # Primary Windows build script
+├── build.sh                   # Primary Linux build script
+├── README.md                  # Project documentation
+├── roms/                      # Generated ROM binaries (gorf-a.bin through gorf-h.bin)
+├── src/
+│   ├── Gorf_Disassembly.asm   # Main Z80 source disassembly
+│   └── zout/                  # Intermediate build files (.cim, .lst)
+└── tools/
+    ├── slice.ps1              # PowerShell ROM slicer (Windows)
+    └── zmac.exe               # Local assembler executable (optional/git-ignored)
 ```
 
 ---

@@ -24,3 +24,4 @@ cfg/
 # OS generated hidden files
 .DS_Store
 Thumbs.db
+roms/

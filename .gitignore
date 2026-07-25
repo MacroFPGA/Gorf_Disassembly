@@ -1,9 +1,11 @@
 # Ignored Folders
 _Work_Area/
 tools/*
+cfg/
 
 # Compiled ROM binaries, lists, objects, and scripts
 *.bin
+*.cim
 *.lst
 *.hex
 *.bat

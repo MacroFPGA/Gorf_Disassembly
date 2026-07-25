@@ -6,26 +6,39 @@ This repository contains the disassembly, source code reconstruction, and techni
 
 ## 🛠️ Build & Tools
 
-* **Assembler:** [zmac v1.3](http://48k.ca/zmac.html) (Z80 Macro Cross Assembler)
+* **Assembler:** zmac v1.3 (Z80 Macro Cross Assembler)
   * [Windows Binary (`zmac.exe`)](https://ballyalley.com/ml/ml_tools/Zmac13_win32.zip)
   * [Linux Source (`Zmac13.tar.gz`)](https://ballyalley.com/ml/ml_tools/Zmac13.tar.gz)
 * **Primary Source:** `src/Gorf_Disassembly.asm`
 
+---
+
 ### Building the ROMs ---> Windows 10 / 11
+
+The Windows build script searches for `zmac` in the following order:
+
+1. The executable named by the `ZMAC` environment variable.
+2. `tools\zmac.exe` in the repository.
+3. `zmac.exe` in `PATH`.
+
 To assemble the source code into MAME-ready ROMs, run the build script from the root directory:
 
 ```cmd
 build.bat
 ```
 
-The script will automatically compile the assembly and deposit the final, ready-to-play binaries (`gorf-a.bin` through `gorf-h.bin`) into a new `roms/` folder in your project root.
+The script will automatically compile the assembly and deposit the final, ready-to-play binaries (`gorf-a.bin` through `gorf-h.bin`) along with the packaged `gorf.zip` into a new `roms/` folder in your project root.
 
-To select a specific assembler executable:
+To select a specific assembler executable outside the default search locations:
 
 ```cmd
 set ZMAC=C:\path\to\zmac.exe
 build.bat
 ```
+
+The script will automatically compile the assembly and deposit the final, ready-to-play binaries (gorf-a.bin through gorf-h.bin) and the packaged gorf.zip into the roms/ folder in your project root.
+
+---
 
 ### Building the ROMs ---> Linux
 
@@ -67,8 +80,7 @@ The SC-01 speech ROM is not part of the reconstructed program source. If a file 
 │   ├── Gorf_Disassembly.asm   # Main Z80 source disassembly
 │   └── zout/                  # Intermediate build files (.cim, .lst)
 └── tools/
-    ├── slice.ps1              # PowerShell ROM slicer (Windows)
-    └── zmac.exe               # Local assembler executable (optional/git-ignored)
+    └── .gitkeep               # Directory tracking file
 ```
 
 ---

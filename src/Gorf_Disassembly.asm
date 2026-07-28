@@ -4020,12 +4020,12 @@ musicin:    ret
 ;******************************************************************************************
 
 L1009:      exx                         ; TERSE CODE
-            ld      de,$D0B1
-            ld      hl,$002F
+            ld      de,$D0B1            ; Why load value and then add to it?
+            ld      hl,$002F            ; resulting address is $D0E0
             add     hl,de
             ld      (hl),$01
             ld      hl,$0004
-            add     hl,de
+            add     hl,de               ; $D0B5
             ld      (hl),$18
             call    $0B86
             DW      _DSPATCH

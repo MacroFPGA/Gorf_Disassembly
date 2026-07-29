@@ -21059,777 +21059,551 @@ LB35C:      exx
             in      a,(c)
             exx
             DW      _DSPATCH
+
 ;******************************************************************************************
-            rst     $08
-            ld      l,l
-            nop
-            dec     (hl)
-            ret     nc
-            ret     p
-            nop
-            dec     h
-            ld      bc,_ARRAY
-            rst     $20
-            or      d
-            jp      (hl)
-            nop
-            dec     bc
-            ld      bc,$00E9
-            ld      bc,$72B3
-            inc     d
-            ld      h,c
-            nop
-            rst     $08
-            ld      l,l
-            nop
-            nop
-            jr      nz,$B31C
-            nop
-            halt
-            nop
-            inc     b
-            sbc     a,b
-            nop
-            ld      b,h
-            ld      (bc),a
-            adc     a,l
-            ld      (bc),a
-            call    nc,$5F3F
-            ld      (bc),a
-            halt
-            nop
-            dec     c
-            halt
-            nop
-            ex      af,af'
-            ld      b,h
-            ld      (bc),a
-            adc     a,l
-            ld      (bc),a
-            call    nc,$5F3F
-            ld      (bc),a
-            inc     de
-            inc     bc
-            ld      l,l
-            nop
-            nop
-            inc     b
-            sbc     a,b
-            nop
-            ld      b,h
-            ld      (bc),a
-            adc     a,l
-            ld      (bc),a
-            halt
-            nop
-            jr      nz,$B3FA
-            inc     b
-            halt
-            nop
-            ld      b,$43
-            inc     b
-            cp      e
-            inc     a
-            ld      a,a
-            ccf
-            ld      e,a
-            ld      (bc),a
-            ld      h,c
-            nop
-            dec     d
-            dec     h
-            ld      d,$76
-            ld      d,c
-            ld      b,$21
-            ld      ($1825),hl
-            ld      b,l
-            ld      h,c
-            ld      a,($4E03)
-            ld      (hl),d
-            inc     b
-            ld      hl,($0D01)
-            dec     c
-            ld      a,$1A
-            ld      ($7736),hl
-            ld      (hl),a
-            dec     l
-            dec     bc
-            ld      e,b
-            inc     c
-            ld      l,h
-            ld      a,h
-            ld      l,d
-            ld      b,$3C
-            inc     e
-            inc     b
-            ld      (hl),l
-            ld      l,e
-            dec     e
-            add     hl,hl
-            ld      b,$0D
-            ld      e,(hl)
-            ld      (hl),a
-            ld      l,b
-            inc     c
-            ld      a,$15
-            ld      e,a
-            ld      a,d
-            rrca
-            ex      af,af'
-            dec     bc
-            ld      h,d
-            ld      c,a
-            inc     hl
-            jr      $B405
-            rra
-            inc     bc
-            dec     bc
-            ld      c,h
-            ld      h,l
-            dec     d
-            ld      e,a
-            ld      c,e
-            ld      c,$18
-            ld      a,$20
-            dec     hl
-            ld      (hl),l
-            ld      (hl),a
-            ld      c,$15
-            ld      hl,($662D)
-            ld      l,e
-            ld      h,c
-            ld      h,d
-            nop
-            dec     hl
-            rra
-            ld      a,$1F
-            ld      l,h
-            ld      e,c
-            cpl
-            nop
-            dec     c
-            ld      e,$1E
-            inc     a
-            rra
-            ld      hl,($352B)
-            dec     bc
-            add     hl,hl
-            jr      c,$B459
-            ld      ($080C),hl
-            ld      c,e
-            ld      l,c
-            inc     e
-            inc     b
-            ld      (hl),l
-            ld      l,e
-            dec     e
-            add     hl,hl
-            ld      b,$0D
-            inc     bc
-            dec     hl
-            ld      (hl),l
-            ld      (hl),a
-            ld      c,$15
-            ld      hl,($031F)
-            ld      d,l
-            ld      l,e
-            ld      sp,$4E0D
-            ld      a,h
-            ld      h,c
-            ld      l,d
-            inc     hl
-            ld      c,$23
-            jr      $B487
-            dec     de
-            dec     d
-            dec     bc
-            ld      l,c
-            cpl
-            ld      b,c
-            ld      c,h
-            jr      c,$B485
-            inc     e
-            inc     b
-            dec     (hl)
-            dec     hl
-            ld      e,l
-            add     hl,hl
-            ld      b,$0D
-            inc     bc
-            ld      e,c
-            ld      d,l
-            dec     c
-            ld      d,b
-            dec     sp
-            rra
-            ld      c,l
-            dec     sp
-            rra
-            ld      a,$1E
-            dec     h
-            dec     hl
-            ld      a,h
-            dec     h
-            ld      l,a
-            ld      a,d
-            add     hl,hl
-            scf
-            ld      (hl),l
-            ld      l,e
-            ld      e,a
-            ld      (bc),a
-            jr      $B491
-            inc     bc
-            dec     e
-            dec     (hl)
-            dec     hl
-            inc     bc
-            ld      ($080D),a
-            ld      c,e
-            ld      l,c
-            jr      $B4C6
-            ld      de,$0D31
-            ld      a,$CF
-            ld      l,l
-            nop
-            inc     h
-            pop     de
-            ret     p
-            nop
-            call    po,$EA01
-            inc     bc
-            cp      b
-            or      h
-            ld      l,l
-            nop
-            inc     bc
-            ret     nc
-            ret     p
-            nop
-            jp      pe,$B803
-            or      h
-            ld      l,l
-            nop
-            adc     a,e
-            ret     nc
-            xor     (hl)
-            djnz    $B518
-            nop
-            ld      (bc),a
-            ld      e,b
-            dec     b
-            jp      pe,$B203
-            or      h
-            ld      l,l
-            nop
-            cp      (hl)
-            or      e
-            jp      po,$B603
-            or      h
-            ld      l,l
-            nop
-            rst     $00
-            ld      de,$10E1
-            ld      h,c
-            nop
-            rst     $08
-            ld      l,l
-            nop
-            ld      l,l
-            ld      de,$0061
-            rst     $08
-            ld      l,l
-            nop
-            rst     $10
-            ld      de,$0061
-            rst     $08
-            ld      l,l
-            nop
-            call    nc,$E1B3
-            djnz    $B502
-            inc     de
-            ld      h,c
-            nop
-            rst     $08
-            ld      l,l
-            nop
-            rst     $28
-            or      e
-            pop     hl
-            djnz    $B50D
-            inc     de
-            ld      h,c
-            nop
-            rst     $08
-            ld      l,l
-            nop
-            ld      a,(bc)
-            ld      (de),a
-            ld      h,c
-            nop
-            rst     $08
-            ld      l,l
-            nop
-            dec     b
-            or      h
-            pop     hl
-            djnz    $B51F
-            inc     de
-            ld      h,c
-            nop
-            rst     $08
-            ld      l,l
-            nop
-            ld      h,$B4
-            ld      h,c
-            nop
-            rst     $08
-            ld      l,l
-            nop
-            ld      c,c
-            or      h
-            ld      h,c
-            nop
-            rst     $08
-            ld      l,l
-            nop
-            ld      h,l
-            or      h
-            pop     hl
-            djnz    $B538
-            inc     de
-            ld      h,c
-            nop
-            rst     $08
-            ld      l,l
-            nop
-            ld      c,e
-            ld      (de),a
-            ld      h,c
-            nop
-            rst     $08
-            ld      l,l
-            nop
-            add     hl,hl
-            pop     de
-            halt
-            nop
-            ld      a,(bc)
-            ld      h,d
-            dec     b
-            ld      l,b
-            inc     b
-            ld      ($BAB5),a
-            or      h
-            pop     bc
-            or      h
-            ret     z
-            or      h
-            out     ($B4),a
-            sbc     a,$B4
-            push    hl
-            or      h
-            ret     p
-            or      h
-            rst     $30
-            or      h
-            cp      $B4
-            add     hl,bc
-            or      l
-            pop     hl
-            djnz    $B596
-            nop
-            rst     $08
-            sbc     a,b
-            nop
-            adc     a,e
-            dec     b
-            ld      e,h
-            or      e
-            ld      l,l
-            nop
-            scf
-            ret     nc
-            ret     p
-            nop
-            cp      e
-            inc     a
-            djnz    $B4FC
-            sbc     a,(hl)
-            nop
-            ld      h,l
-            or      e
-            ld      e,h
-            or      e
-            ld      h,c
-            nop
-            ld      sp,$D2C0
-            ld      ix,$D340
-            ld      iy,DSPATCH
-            inc     bc
+W_B365:
+            DB      _ENTER
+            DW      _LITword
+            DW      MISSION
+            DW      _Bat
+            DW      _1minus
+            DW      _ARRAY
+            DW      $B2E7
+            DW      _at
+            DW      _plus
+            DW      _at
+            DW      $B301
+            DW      $1472
+            DW      _RETURN
+
+;******************************************************************************************
+W_B37E:
+            DB      _ENTER
+            DW      _LITword
+            DW      $2000
+            DW      _0
+            DW      _LITbyte
+            DB      $04
+            DW      _0
+            DW      _DO
+            DW      _I
+            DW      $3FD4
+            DW      _LOOP
+            DW      _LITbyte
+            DB      $0D
+            DW      _LITbyte
+            DB      $08
+            DW      _DO
+            DW      _I
+            DW      $3FD4
+            DW      _LOOP
+            DW      _2DROP
+            DW      _LITword
+            DW      $0400
+            DW      _0
+            DW      _DO
+            DW      _I
+            DW      _LITbyte
+            DB      $20
+            DW      _slash
+            DW      _LITbyte
+            DB      $06
+            DW      _MOD
+            DW      $3CBB
+            DW      $3F7F
+            DW      _LOOP
+            DW      _RETURN
+
+;##########################################################################################
+;       DATA 'PUSH TALK PRIM
+;       P OO1 IU SH PA1 AY Y1 P L PA2 AY ER PA0 pB UH1 DT T EH2 N N PA1 ENDPRIM
+;##########################################################################################      
+SPK_PUSH:
+            DB      $15
+            DB      $25,$16,$76,$51,$06,$21,$22,$25
+            DB      $18,$45,$61,$3A,$03,$4E,$72,$04
+            DB      $2A,$01,$0D,$0D,$3E
+
+;##########################################################################################
+;       DATA 'DOOM TALK PRIM
+;       Y1 IU U1 U1 W I1 L M pE pE1 T pA1 pE1 G DT O1 R pF Y pA1 N pD U1 U M PA1 ENDPRIM
+;##########################################################################################      
+SPK_DOOM:
+            DB      $1A
+            DB      $22,$36,$77,$77,$2D,$0B,$58,$0C
+            DB      $6C,$7C,$6A,$06,$3C,$1C,$04,$75
+            DB      $6B,$1D,$29,$06,$0D,$5E,$77,$68
+            DB      $0C,$3E
+
+;##########################################################################################
+;       DATA 'SURVIVAL TALK PRIM
+;       S ER V AH2 I1 Y1 V UH3 L I1 S PA0 I1 M P AH1 S I1 pB L PA1 ENDPRIM
+;##########################################################################################      
+SPK_SURVIVAL:
+            DB      $15
+            DB      $5F,$7A,$0F,$08,$0B,$62,$4F,$23
+            DB      $18,$0B,$1F,$03,$0B,$4C,$65,$15
+            DB      $5F,$4B,$0E,$18,$3E
+
+;##########################################################################################
+;       DATA 'ROBOWARRIOR TALK PRIM
+;       R O1 U1 pB AH1 T W O R AY Y1 EH3 R S PA1 S pE K0 
+;       pAE1 EH3 N pD pD pE1 S T R O1 I1 Y THV UH ENDPRIM
+;##########################################################################################      
+SPK_ROBOWARRIOR:
+            DB      $20
+            DB      $2B,$75,$77,$0E,$15,$2A,$2D,$66
+            DB      $6B,$61,$62,$00,$2B,$1F,$3E,$1F
+            DB      $6C,$59,$2F,$00,$0D,$1E,$1E,$3C
+            DB      $1F,$2A,$2B,$35,$0B,$29,$38,$33
+
+;##########################################################################################
+;       DATA 'GORFIAN TALK PRIM
+;       M AH2 I1 Y G DT O1 R pF Y pA1 N PA0 R O1 U1 pB AH1 T S 
+;       PA0 AH1 R UH2 N pB pE1 AY T UH3 pB L PA1 ENDPRIM
+;##########################################################################################      
+SPK_GORFIAN:
+            DB      $22
+            DB      $0C,$08,$4B,$69,$1C,$04,$75,$6B
+            DB      $1D,$29,$06,$0D,$03,$2B,$75,$77
+            DB      $0E,$15,$2A,$1F,$03,$55,$6B,$31
+            DB      $0D,$4E,$7C,$61,$6A,$23,$0E,$23
+            DB      $18,$3E
+
+;##########################################################################################
+;       DATA 'IAM TALK PRIM
+;       AH1 I1 Y pAE1 EH2 M THV UH G DT O1 R pF Y pA1 N
+;       PA0 K0 AH1 N CH EH S N EH S PA1 ENDPRIM
+;##########################################################################################      
+SPK_IAM:
+
+            DB      $1B
+            DB      $15,$0B,$69,$2F,$41,$4C,$38,$33
+            DB      $1C,$04,$35,$2B,$5D,$29,$06,$0D
+            DB      $03,$59,$55,$0D,$50,$3B,$1F,$4D
+            DB      $3B,$1F,$3E
+
+;##########################################################################################
+;       DATA 'PREPARE TALK PRIM
+;       P R pE1 P pAE1 ER Y U1 O1 R S EH1 L pF PA0 pF O1 R PA0 
+;       UH1 N AH2 I1 Y H pA1 SH UH2 N PA1 ENDPRIM
+;##########################################################################################      
+SPK_PREPARE:
+
+            DB      $1E
+            DB      $25,$2B,$7C,$25,$6F,$7A,$29,$37
+            DB      $75,$6B,$5F,$02,$18,$1D,$03,$1D
+            DB      $35,$2B,$03,$32,$0D,$08,$4B,$69
+            DB      $18,$46,$11,$31,$0D,$3E
+
+;******************************************************************************************
+; Speak one of two messages if credits available
+;******************************************************************************************
+SPKCOIN:
+            DB      _ENTER
+            DW      _LITword
+            DW      $D124
+            DW      _Bat
+            DW      _zeroequal
+            DW      _0BRANCH
+            DW      spkcoin2
+            DW      _LITword
+            DW      COINSIN
+            DW      _Bat
+            DW      _0BRANCH
+            DW      spkcoin2
+            DW      _LITword
+            DW      AMBUSY
+            DW      _BONE
+            DW      _LITbyte
+            DB      $02
+            DW      _RND
+            DW      _0BRANCH
+            DW      spkcoin0
+            DW      _LITword
+            DW      SPK_PUSH            ; Push a player button
+            DW      _BRANCH
+            DW      spkcoin1
+spkcoin0:   DW      _LITword
+            DW      SPK_LONG
+spkcoin1:   DW      _SPEAK
+spkcoin2:   DW      _RETURN
+
+;******************************************************************************************
+SPEAKGORF:
+            DB      _ENTER
+            DW      _LITword
+            DW      SPK_GORF
+            DW      _RETURN
+;******************************************************************************************
+SPEAKROBOTS:
+            DB      _ENTER
+            DW      _LITword
+            DW      SPK_ROBOTS
+            DW      _RETURN
+;******************************************************************************************
+SPEAKDOOM:
+            DB      _ENTER
+            DW      _LITword
+            DW      SPK_DOOM
+            DW      _SPEAK
+            DW      _GETRANK
+            DW      _RETURN
+;******************************************************************************************
+SPEAKSURVIVAL:
+            DB      _ENTER
+            DW      _LITword
+            DW      SPK_SURVIVAL
+            DW      _SPEAK
+            DW      _GETRANK
+            DW      _RETURN
+;******************************************************************************************
+SPEAKESCAPE:
+            DB      _ENTER
+            DW      _LITword
+            DW      SPK_ESCAPE
+            DW      _RETURN
+;******************************************************************************************
+SPEAKROBOWARRIOR:
+            DB      _ENTER
+            DW      _LITword
+            DW      SPK_ROBOWARRIOR
+            DW      _SPEAK
+            DW      _GETRANK
+            DW      _RETURN
+;******************************************************************************************
+SPEAKGORFIAN:
+            DB      _ENTER
+            DW      _LITword
+            DW      SPK_GORFIAN
+            DW      _RETURN
+;******************************************************************************************
+SPEAKIAM:
+            DB      _ENTER
+            DW      _LITword
+            DW      SPK_IAM
+            DW      _RETURN
+;******************************************************************************************
+SPEAKPREPARE:
+            DB      _ENTER
+            DW      _LITword
+            DW      SPK_PREPARE
+            DW      _SPEAK
+            DW      _GETRANK
+            DW      _RETURN
+;******************************************************************************************
+SPEAKPRIS:
+            DB      _ENTER
+            DW      _LITword
+            DW      SPK_PRIS
+            DW      _RETURN
+;******************************************************************************************
+SPEAKSTART:
+            DB      _ENTER
+            DW      _LITword
+            DW      $D129
+            DW      _LITbyte
+            DB      $0A
+            DW      _UNEQRND
+            DW      _CASES
+            DW      $B532
+            DW      SPEAKGORF
+            DW      SPEAKROBOTS
+            DW      SPEAKDOOM
+            DW      SPEAKSURVIVAL
+            DW      SPEAKESCAPE
+            DW      SPEAKROBOWARRIOR
+            DW      SPEAKGORFIAN
+            DW      SPEAKIAM
+            DW      SPEAKPREPARE
+            DW      SPEAKPRIS
+            DW      _SPEAK
+            DW      _RETURN
+;******************************************************************************************
+W_B536:
+            DB      _ENTER
+            DW      _0
+            DW      _FLOOD
+            DW      LB35C
+            DW      _LITword
+            DW      SKILLFACTOR
+            DW      _Bat
+            DW      $3CBB
+            DW      SPEAKSTART
+            DW      _1
+            DW      W_B365
+            DW      LB35C
+            DW      _RETURN
+            DW      $C031
+            DW      $DDD2
+            DW      $4021
+            DW      $FDD3
+            DW      $5A21
+            DW      $0300
+            DW      _DSPATCH
+            DW      $C3C1
+            DW      $B54F
+;******************************************************************************************
+W_B561:
+            DB      _ENTER
+            DW      _LITword
+            DW      $D951
+            DW      _at
+            DW      _zeroequal
+            DW      _0BRANCH
+            DW      $B5CF
+            DW      _LITword
+            DW      MISSIONCTR
+            DW      _BCDBUMP
+            DW      _LITword
+            DW      MISSION
+            DW      _PINC
+            DW      _LITword
+            DW      MISSION
+            DW      _Bat
+            DW      _LITbyte
+            DB      $06
+            DW      _equal
+            DW      _0BRANCH
+            DW      $B5CF
+            DW      _LITword
+            DW      SKILLFACTOR
+            DW      _Bat
+            DW      _zeroequal
+            DW      _0BRANCH
+            DW      $B5C3
+            DW      _LITbyte
+            DB      $13
+            DW      _INP
+            DW      _LITbyte
+            DB      $20
+            DW      _AND
+            DW      _0BRANCH
+            DW      $B5C3
+            DW      _LITword
+            DW      P1FBCTR
+            DW      _Bat
+            DW      _0BRANCH
+            DW      $B5B3
+            DW      _LITword
+            DW      P1FBCTR
+            DW      _PINC
+            DW      _LITword
+            DW      P2FBCTR
+            DW      _Bat
+            DW      _0BRANCH
+            DW      $B5C3
+            DW      _LITword
+            DW      P2FBCTR
+            DW      _PINC
+            DW      _LITword
+            DW      SKILLFACTOR
+            DW      _PINC
+            DW      _LITword
+            DW      MISSION
+            DW      _P1
+            DW      _RETURN
+
+;******************************************************************************************
+W_B5D1:
+            DB      _ENTER
+            DW      _LITword
+            DW      $D09F
+            DW      _bang
+            DW      $288B
+            DW      $2F18
+            DW      _LITword
+            DW      $D09F
+            DW      _at
+            DW      _zeroequal
+            DW      _0BRANCH
+            DW      $B5D8
+            DW      _RETURN
+;******************************************************************************************
+W_B5EA:
+            DB      _ENTER
+            DW      $B32C
+            DW      _DI
+            DW      _LITbyte
+            DB      $F0
+            DW      _XUP
+            DW      _LITbyte
+            DB      $02
+            DW      _SPELL
+            DW      _LITbyte
+            DB      $C8
+            DW      _XUP
+            DW      _LITbyte
+            DB      $04
+            DW      _LITword
+            DW      PLAYERUP
+            DW      _Bat
+            DW      _minussign
+            DW      _SPELL
+            DW      $B341
+            DW      _LITbyte
+            DB      $05
+            DW      _0
+            DW      _DO
+            DW      _DUP
+            DW      _LITbyte
+            DB      $A0
+            DW      _XUP
+            DW      _SWAP
+            DW      _SPELL
+            DW      _DUP
+            DW      _1plus
+            DW      _LITbyte
+            DB      $78
+            DW      _XUP
+            DW      _SWAP
+            DW      _SPELL
+            DW      _EI
+            DW      _LITbyte
+            DB      $12
+            DW      W_B5D1
+            DW      _DI
+            DW      _LOOP
+            DW      _DROP
+            DW      _RETURN
+;******************************************************************************************
+W_B63B:
+            DB      _ENTER
+            DW      _LITbyte
+            DB      $13
+            DW      _INP
+            DW      _LITbyte
+            DB      $10
+            DW      _AND
+            DW      _zeroequal
+            DW      _2plus
+            DW      _RETURN
+;******************************************************************************************
+W_B64C:
+            DB      _ENTER
+            DW      W_B63B
+            DW      _LITword
+            DW      COINSIN
+            DW      _Bat
+            DW      _1
+            DW      _gt
+            DW      _0BRANCH
+            DW      $B666
+            DW      _2splat
+            DW      _LITbyte
+            DB      $02
+            DW      _BRANCH
+            DW      $B668
+            DW      _1
+            DW      _RETURN
+;******************************************************************************************
+W_B66A:
+            DB      _ENTER
+            DW      W_B63B
+            DW      _LITword
+            DW      COINSIN
+            DW      _Bat
+            DW      _LITbyte
+            DB      $03
+            DW      _gt
+            DW      _0BRANCH
+            DW      $B687
+            DW      _2splat
+            DW      _DUP
+            DW      _LITbyte
+            DB      $04
+            DW      _BRANCH
+            DW      $B68C
+            DW      _DUP
+            DW      _LITbyte
+            DB      $02
+            DW      _RETURN
+;******************************************************************************************
+W_B68E:
+            DB      _ENTER
+            DW      _LITbyte
+            DB      $13
+            DW      _INP
+            DW      _LITbyte
+            DB      $40
+            DW      _AND
+            DW      _zeroequal
+            DW      _RETURN
+;******************************************************************************************
+W_B69D:
+            DB      _ENTER
+            DW      W_B68E
+            DW      _0BRANCH
+            DW      $B6AD
+            DW      _LITbyte
+            DB      $04
+            DW      _LITword
+            DW      COINSIN
+            DW      _PWB
+            DW      _RETURN
+;******************************************************************************************
+W_B6AF:
+            DB      _ENTER
+            DW      _STARTGAME
+            DW      _LITword
+            DW      DEMOMODE
+            DW      _P0
+            DW      _1
+            DW      _LITword
+            DW      $D0AF
+            DW      _Bbang
+            DW      _LITword
+            DW      MISSION
+            DW      _P1
+            DW      _LITword
+            DW      $D951
+            DW      _ZERO
+            DW      _LITword
+            DW      RIP
+            DW      _P0
+            DW      _RETURN
+;******************************************************************************************
+W_B6D4:
+            DB      _ENTER
+            DW      _LITword
+            DW      $B2F9
+            DW      _COLOR
+            DW      _LITbyte
+            DB      $08
+            DW      $369C
+            DW      _LITbyte
+            DB      $02
+            DW      _LITbyte
+            DB      $09
+            DW      _OUTP
+            DW      _RETURN
+
+            DW      $D1D9
+            DW      $06E1
+            DW      $2303
+            DW      $1323
+            DW      $1A13
+            DW      $38BE
+            DW      $200B
+            DW      $2B04
+            DW      $101B
+            DW      $21F6
+            DW      COINBITR
+            DW      $0318
+            DW      $0121
+            DW      $E500
+            DW      $FDD9
+            DW      $D9E9
+            DW      $D1E1
+            DW      $0306
+            DW      $D51A
+            DW      $CD5F
+            DW      wpb_bang
+            DW      $23D1
+            DW      $1013
+            DW      $D9F5
             DW      _DSPATCH
 ;******************************************************************************************
-            pop     bc
-            jp      $B54F
-            rst     $08
-            ld      l,l
-            nop
-            ld      d,c
-            exx
-            jp      (hl)
-            nop
-            call    po,$EA01
-            inc     bc
-            rst     $08
-            or      l
-            ld      l,l
-            nop
-            ld      (hl),$D0
-            xor     e
-            ld      a,(bc)
-            ld      l,l
-            nop
-            dec     (hl)
-            ret     nc
-            adc     a,c
-            ld      d,$6D
-            nop
-            dec     (hl)
-            ret     nc
-            ret     p
-            nop
-            halt
-            nop
-            ld      b,$6C
-            ld      bc,_0BRANCH
-            rst     $08
-            or      l
-            ld      l,l
-            nop
-            scf
-            ret     nc
-            ret     p
-            nop
-            call    po,$EA01
-            inc     bc
-            jp      $76B5
-            nop
-            inc     de
-            ret     m
-            ld      (bc),a
-            halt
-            nop
-            jr      nz,$B5B3
-            ld      (bc),a
-            jp      pe,$C303
-            or      l
-            ld      l,l
-            nop
-            ld      ($F0D0),a
-            nop
-            jp      pe,$B303
-            or      l
-            ld      l,l
-            nop
-            ld      ($89D0),a
-            ld      d,$6D
-            nop
-            inc     sp
-            ret     nc
-            ret     p
-            nop
-            jp      pe,$C303
-            or      l
-            ld      l,l
-            nop
-            inc     sp
-            ret     nc
-            adc     a,c
-            ld      d,$6D
-            nop
-            scf
-            ret     nc
-            adc     a,c
-            ld      d,$6D
-            nop
-            dec     (hl)
-            ret     nc
-            ld      h,a
-            ld      d,$61
-            nop
-            rst     $08
-            ld      l,l
-            nop
-            sbc     a,a
-            ret     nc
-            rst     $30
-            nop
-            adc     a,e
-            jr      z,$B5F3
-            cpl
-            ld      l,l
-            nop
-            sbc     a,a
-            ret     nc
-            jp      (hl)
-            nop
-            call    po,$EA01
-            inc     bc
-            ret     c
-            or      l
-            ld      h,c
-            nop
-            rst     $08
-            inc     l
-            or      e
-            call    $7604
-            nop
-            ret     p
-            ex      af,af'
-            ld      a,(bc)
-            halt
-            nop
-            ld      (bc),a
-            djnz    $B603
-            halt
-            nop
-            ret     z
-            ex      af,af'
-            ld      a,(bc)
-            halt
-            nop
-            inc     b
-            ld      l,l
-            nop
-            jr      c,$B5D5
-            ret     p
-            nop
-            ld      de,$1001
-            ld      a,(bc)
-            ld      b,c
-            or      e
-            halt
-            nop
-            dec     b
-            sbc     a,b
-            nop
-            ld      b,h
-            ld      (bc),a
-            and     h
-            nop
-            halt
-            nop
-            and     b
-            ex      af,af'
-            ld      a,(bc)
-            adc     a,$00
-            djnz    $B629
-            and     h
-            nop
-            ld      hl,($7601)
-            nop
-            ld      a,b
-            ex      af,af'
-            ld      a,(bc)
-            adc     a,$00
-            djnz    $B636
-            ret     nc
-            inc     b
-            halt
-            nop
-            ld      (de),a
-            pop     de
-            or      l
-            call    $5F04
-            ld      (bc),a
-            or      c
-            nop
-            ld      h,c
-            nop
-            rst     $08
-            halt
-            nop
-            inc     de
-            ret     m
-            ld      (bc),a
-            halt
-            nop
-            djnz    $B65A
-            ld      (bc),a
-            call    po,$2F01
-            ld      bc,$0061
-            rst     $08
-            dec     sp
-            or      (hl)
-            ld      l,l
-            nop
-            inc     bc
-            ret     nc
-            ret     p
-            nop
-            sbc     a,(hl)
-            nop
-            jp      c,$EA01
-            inc     bc
-            ld      h,(hl)
-            or      (hl)
-            dec     sp
-            ld      bc,$0076
-            ld      (bc),a
-            jp      po,$6803
-            or      (hl)
-            sbc     a,(hl)
-            nop
-            ld      h,c
-            nop
-            rst     $08
-            dec     sp
-            or      (hl)
-            ld      l,l
-            nop
-            inc     bc
-            ret     nc
-            ret     p
-            nop
-            halt
-            nop
-            inc     bc
-            jp      c,$EA01
-            inc     bc
-            add     a,a
-            or      (hl)
-            dec     sp
-            ld      bc,$00A4
-            halt
-            nop
-            inc     b
-            jp      po,$8C03
-            or      (hl)
-            and     h
-            nop
-            halt
-            nop
-            ld      (bc),a
-            ld      h,c
-            nop
-            rst     $08
-            halt
-            nop
-            inc     de
-            ret     m
-            ld      (bc),a
-            halt
-            nop
-            ld      b,b
-            dec     d
-            ld      (bc),a
-            call    po,$6101
-            nop
-
-;******************************************************************************************
-
-LB69D:      rst     $08
-            adc     a,(hl)
-            or      (hl)
-            jp      pe,$AD03
-            or      (hl)
-            halt
-            nop
-            inc     b
-            ld      l,l
-            nop
-            inc     bc
-            ret     nc
-            ld      h,b
-            ld      d,$61
-            nop
-            rst     $08
-            call    z,$6D35
-            nop
-            ld      bc,$6FD0
-            ld      d,$9E
-            nop
-            ld      l,l
-            nop
-            xor     a
-            ret     nc
-            cp      $00
-            ld      l,l
-            nop
-            dec     (hl)
-            ret     nc
-            ld      h,a
-            ld      d,$6D
-            nop
-            ld      d,c
-            exx
-            inc     bc
-            ld      bc,_LITword
-            inc     (hl)
-            ret     nc
-            ld      l,a
-            ld      d,$61
-            nop
-            rst     $08
-            ld      l,l
-            nop
-            ld      sp,hl
-            or      d
-            ld      a,h
-            dec     b
-            halt
-            nop
-            ex      af,af'
-            sbc     a,h
-            ld      (hl),$76
-            nop
-            ld      (bc),a
-            halt
-            nop
-            add     hl,bc
-            ret     p
-            ld      (bc),a
-            ld      h,c
-            nop
-            exx
-            pop     de
-            pop     hl
-            ld      b,$03
-            inc     hl
-            inc     hl
-            inc     de
-            inc     de
-            ld      a,(de)
-            cp      (hl)
-            jr      c,$B702
-            jr      nz,$B6FD
-            dec     hl
-            dec     de
-            djnz    $B6F3
-            ld      hl,$0000
-            jr      $B705
-            ld      hl,$0001
-            push    hl
-            exx
-            DW      _DSPATCH
-
-;******************************************************************************************
-            exx
-            pop     hl
-            pop     de
-            ld      b,$03
-            ld      a,(de)
-            push    de
-            ld      e,a
-            call    wpb_bang            ; Write byte to protected memory
-            pop     de
-            inc     hl
-            inc     de
-            djnz    $B70E
-            exx
-            DW      _DSPATCH
-;******************************************************************************************
-
 W_B71C:
             DB      _ENTER
             DW      _LITword
@@ -21843,7 +21617,7 @@ W_B725:
             DW      _LITbyte
             DB      $05
             DW      _0
-            DW      _DO
+            DW      _DO                 ; Start loop I - 0 to 4
             DW      _2DUP
             DW      _I
             DW      _LITbyte
@@ -21901,19 +21675,21 @@ W_B725:
             DW      _RETURN
 
 ;******************************************************************************************
-W_B794:
+; Get the base address of the relevant high score table
+;******************************************************************************************
+GETHSARRAY:
             DB      _ENTER
             DW      _LITword
             DW      INITFB
             DW      _Bat
             DW      _less
             DW      _0BRANCH
-            DW      $B7A7
+            DW      geths0
             DW      _HS4
             DW      _BRANCH
-            DW      $B7A9
-            DW      _HS2
-            DW      W_B725
+            DW      geths1
+geths0:     DW      _HS2
+geths1:     DW      W_B725
             DW      _RETURN
 
 ;******************************************************************************************
@@ -22111,7 +21887,7 @@ W_B8BB:
             DW      $DDA0
             DW      _bang
             DW      W_B87A
-            DW      LB69D
+            DW      W_B69D
             DW      _LITword
             DW      $01C2
             DW      $B5D1
@@ -22136,7 +21912,7 @@ LB900:
             DW      _BARRAY
             DW      P1SCR
             DW      _1
-            DW      W_B794
+            DW      GETHSARRAY
             DW      W_B8BB
             DW      _RETURN
 
@@ -22185,13 +21961,13 @@ W_B952:
             DW      P1SCR
             DW      _LITbyte
             DB      $02
-            DW      W_B794
+            DW      GETHSARRAY
             DW      _0
             DW      _BARRAY
             DW      P2SCR
             DW      _LITbyte
             DB      $03
-            DW      W_B794
+            DW      GETHSARRAY
             DW      _LITword
             DW      INITFB
             DW      _Bat
@@ -22224,73 +22000,54 @@ W_B952:
             DW      _RETURN
 
 ;******************************************************************************************
+W_B9B3:
+            DB      _ENTER
+            DW      _LITbyte
+            DB      $07
+            DW      W_B5EA
+            DW      _LITword
+            DW      RIP
+            DW      _Bat
+            DW      _0BRANCH
+            DW      $B9C9
+            DW      _LITword
+            DW      W_B952
+            DW      $B55D
+            DW      W_B536
+            DW      _LITword
+            DW      $D951
+            DW      _at
+            DW      _0BRANCH
+            DW      $B9E6
+            DW      _LITbyte
+            DB      $05
+            DW      W_B5EA
+            DW      _LITword
+            DW      RIP
+            DW      _P1
+            DW      _LITword
+            DW      $D951
+            DW      _ZERO
+            DW      _LITword
+            DW      PLAYERUP
+            DW      _Bat
+            DW      _1plus
+            DW      _1
+            DW      _AND
+            DW      _DUP
+            DW      _LITword
+            DW      PLAYERUP
+            DW      _PWB
+            DW      _zeroequal
+            DW      _0BRANCH
+            DW      $BA02
+            DW      W_B561
+            DW      _0
+            DW      _0BRANCH
+            DW      $B9B4
+            DW      _RETURN
+;******************************************************************************************
 
-LB9B3:      rst     $08
-            halt
-            nop
-            rlca
-            jp      pe,$6DB5
-            nop
-            inc     (hl)
-            ret     nc
-            ret     p
-            nop
-            jp      pe,$C903
-            cp      c
-            ld      l,l
-            nop
-            ld      d,d
-            cp      c
-            ld      e,l
-            or      l
-            ld      (hl),$B5
-            ld      l,l
-            nop
-            ld      d,c
-            exx
-            jp      (hl)
-            nop
-            jp      pe,$E603
-            cp      c
-            halt
-            nop
-            dec     b
-            jp      pe,$6DB5
-            nop
-            inc     (hl)
-            ret     nc
-            ld      h,a
-            ld      d,$6D
-            nop
-            ld      d,c
-            exx
-            inc     bc
-            ld      bc,_LITword
-            jr      c,$B9BA
-            ret     p
-            nop
-            ld      hl,($9E01)
-            nop
-            dec     d
-            ld      (bc),a
-            and     h
-            nop
-            ld      l,l
-            nop
-            jr      c,$B9C8
-            ld      h,b
-            ld      d,$E4
-            ld      bc,_0BRANCH
-            ld      (bc),a
-            cp      d
-            ld      h,c
-            or      l
-            sbc     a,b
-            nop
-            jp      pe,$B403
-            cp      c
-            ld      h,c
-            nop
             rst     $08
             ld      l,l
             nop
@@ -23412,7 +23169,7 @@ gos_setmus:         DW      _LITword            ;
                     DW      _LITword            ;
                     DW      SKILLFACTOR         ; / Push address of SKILLFACTOR ($D037)
                     DW      _P0                 ; WPBZERO (Write Protect 0 - Reset Rank)
-                    DW      LB69D               ; [ROM PATCH] Unknown vector call (Likely GSAB DOIT)
+                    DW      W_B69D              ; [ROM PATCH] Unknown vector call (Likely GSAB DOIT)
                     DW      $BD4E               ; GOSHOW (Title screen display routine at $BD4E)
                     DW      SHUTUP              ; SHUTUP (Silence audio hardware)
                     DW      _LITword            ;

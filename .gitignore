@@ -19,6 +19,7 @@ roms/
 # System-generated files
 .DS_Store
 Thumbs.db
+*.lnk
 
 # Explicit exceptions for required scripts & structure
 !build.bat

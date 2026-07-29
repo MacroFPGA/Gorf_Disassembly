@@ -4020,12 +4020,12 @@ musicin:    ret
 ;******************************************************************************************
 
 L1009:      exx                         ; TERSE CODE
-            ld      de,$D0B1
-            ld      hl,$002F
+            ld      de,$D0B1            ; Why load value and then add to it?
+            ld      hl,$002F            ; resulting address is $D0E0
             add     hl,de
             ld      (hl),$01
             ld      hl,$0004
-            add     hl,de
+            add     hl,de               ; $D0B5
             ld      (hl),$18
             call    $0B86
             DW      _DSPATCH
@@ -21829,559 +21829,402 @@ LB69D:      rst     $08
             exx
             DW      _DSPATCH
 ;******************************************************************************************
-            rst     $08
-            ld      l,l
-            nop
-            and     b
-            jp      (ix)
-            nop
-            ld      h,c
-            nop
-            rst     $08
-            halt
-            nop
-            dec     b
-            sbc     a,b
-            nop
-            ld      b,h
-            ld      (bc),a
-            xor     c
-            nop
-            adc     a,l
-            ld      (bc),a
-            halt
-            nop
-            inc     bc
-            rla
-            inc     bc
-            dec     bc
-            ld      bc,$B6EA
-            jp      pe,$8C03
-            or      a
-            adc     a,l
-            ld      (bc),a
-            halt
-            nop
-            inc     b
-            ld      a,e
-            ld      bc,_0BRANCH
-            ld      l,d
-            or      a
-            adc     a,l
-            ld      (bc),a
-            halt
-            nop
-            inc     bc
-            ld      b,h
-            ld      (bc),a
-            and     h
-            nop
-            adc     a,l
-            ld      (bc),a
-            halt
-            nop
-            inc     bc
-            rla
-            inc     bc
-            dec     bc
-            ld      bc,$00A4
-            halt
-            nop
-            inc     bc
-            dec     bc
-            ld      bc,$B709
-            ld      l,l
-            nop
-            rst     $38
-            rst     $38
-            sub     a
-            inc     bc
-            xor     c
-            nop
-            adc     a,l
-            ld      (bc),a
-            halt
-            nop
-            inc     bc
-            rla
-            inc     bc
-            dec     bc
-            ld      bc,$00A9
-            add     hl,bc
-            or      a
-            adc     a,$00
-            halt
-            nop
-            inc     bc
-            dec     bc
-            ld      bc,$1660
-            sbc     a,(hl)
-            nop
-            ld      l,l
-            nop
-            sbc     a,(hl)
-            DB      $dd,$f7
-            nop
-            rst     $30
-            inc     bc
-            ld      e,a
-            ld      (bc),a
-            or      c
-            nop
-            or      c
-            nop
-            ld      h,c
-            nop
-            rst     $08
-            ld      l,l
-            nop
-            ld      a,($F0D0)
-            nop
-            xor     b
-            ld      bc,_0BRANCH
-            and     a
-            or      a
-            xor     h
-            inc     b
-            jp      po,$A903
-            or      a
-            and     e
-            inc     b
-            dec     h
-            or      a
-            ld      h,c
-            nop
-            rst     $08
-            inc     e
-            or      a
-            jp      pe,$CD03
-            or      a
-            halt
-            nop
-            add     a,b
-            rla
-            inc     bc
-            inc     e
-            or      a
-            adc     a,$00
-            ld      de,$6D01
-            nop
-            and     b
-            DB      $dd,$f7
-            nop
-            ret     nc
-            inc     b
-            jr      $B7F8
-            jp      po,$CF03
-            or      a
-            ld      h,d
-            inc     a
-            ld      h,c
-            nop
-            rst     $08
-            halt
-            nop
-            rst     $38
-            dec     d
-            ld      (bc),a
-            and     h
-            nop
-            halt
-            nop
-            inc     bc
-            adc     a,b
-            nop
-            inc     c
-            ret     nc
-            ret     p
-            nop
-            ld      l,h
-            ld      bc,_0BRANCH
-            cp      $B7
-            inc     e
-            or      a
-            ld      l,l
-            nop
-            nop
-            ld      a,b
-            ld      l,l
-            nop
-            inc     b
-            ld      (_LITword),hl
-            jr      z,$B7FA
-            xor     c
-            ld      b,$B1
-            nop
-            jp      po,$1D03
-            cp      b
-            halt
-            nop
-            inc     bc
-            adc     a,b
-            nop
-            rra
-            ret     nc
-            ret     p
-            nop
-            ld      l,h
-            ld      bc,_0BRANCH
-            dec     e
-            cp      b
-            inc     e
-            or      a
-            ld      l,l
-            nop
-            nop
-            ld      a,b
-            ld      l,l
-            nop
-            ld      d,$22
-            ld      l,l
-            nop
-            jr      z,$B81F
-            xor     c
-            ld      b,$61
-            nop
-            rst     $08
-            halt
-            nop
-            inc     de
-            ret     m
-            ld      (bc),a
-            halt
-            nop
-            djnz    $B83E
-            ld      (bc),a
-            call    po,$EA01
-            inc     bc
-            ld      ($2AB8),a
-            ld      bc,$0061
-            rst     $08
-            inc     e
-            or      a
-            ld      l,l
-            nop
-            jr      z,$B83F
-            ld      (bc),a
-            inc     bc
-            cp      e
-            add     hl,bc
-            jp      po,$AD09
-            or      a
-            ld      h,c
-            nop
-            rst     $08
-            rra
-            cp      b
-            inc     (hl)
-            cp      b
-            halt
-            nop
-            dec     b
-            sbc     a,b
-            nop
-            ld      b,h
-            ld      (bc),a
-            inc     e
-            or      a
-            ld      l,l
-            nop
-            nop
-            ld      c,e
-            ld      l,l
-            nop
-            jr      z,$B85F
-            halt
-            nop
-            inc     b
-            add     hl,bc
-            inc     bc
-            halt
-            nop
-            inc     bc
-            adc     a,l
-            ld      (bc),a
-            rla
-            inc     bc
-            dec     bc
-            ld      bc,$00A4
-            pop     de
-            or      a
-            dec     (hl)
-            ld      a,(bc)
-            halt
-            nop
-            ex      af,af'
-            xor     l
-            or      a
-            ld      e,a
-            ld      (bc),a
-            or      c
-            nop
-            ld      h,c
-            nop
-            rst     $08
-            sbc     a,b
-            nop
-            adc     a,b
-            nop
-            djnz    $B851
-            halt
-            nop
-            ld      a,(bc)
-            halt
-            nop
-            ld      e,$45
-            cp      b
-            halt
-            nop
-            ld      (bc),a
-            xor     l
-            or      a
-            sbc     a,b
-            nop
-            adc     a,b
-            nop
-            inc     hl
-            ret     nc
-            halt
-            nop
-            ld      a,(bc)
-            halt
-            nop
-            jr      nz,$B8E0
-            cp      b
-            ld      h,c
-            nop
-            rst     $08
-            ld      l,l
-            nop
-            rrca
-            ret     nc
-            ld      l,a
-            ld      d,$6D
-            nop
-            ld      ($6FD0),hl
-            ld      d,$6D
-            nop
-            sbc     a,(hl)
-            DB      $dd,$03
-            ld      bc,$009E
-            ld      l,l
-            nop
-            sub     a
-            ret     nc
-            cp      $00
-            ld      h,c
-            nop
-            rst     $08
-            ld      l,l
-            nop
-            add     hl,bc
-            ret     nc
-            ld      l,a
-            ld      d,$6D
-            nop
-            ld      bc,$67D0
-            ld      d,$6D
-            nop
-            jr      c,$B89C
-            ld      l,a
-            ld      d,$6D
-            nop
-            sbc     a,(hl)
-            jp      (ix)
-            nop
-            jp      pe,$FA03
-            cp      b
-            inc     l
-            or      e
-            ld      l,l
-            nop
-            adc     a,e
-            ret     nc
-            xor     (hl)
-            djnz    $B922
-            or      e
-            ld      l,l
-            nop
-            nop
-            ld      b,b
-            ld      l,l
-            nop
-            and     b
-            DB      $dd,$f7
-            nop
-            ld      a,d
-            cp      b
-            sbc     a,l
-            or      (hl)
-            ld      l,l
-            nop
-            jp      nz,$D101
-            or      l
-            sbc     a,b
-            nop
-            adc     a,e
-            dec     b
-            sbc     a,b
-            nop
-            ld      (hl),d
-            inc     d
-            ld      h,c
-            nop
-LB900:      rst     $08
-            ld      (hl),$B5
-            ld      h,c
-            or      l
-            ld      l,l
-            nop
-            ld      d,c
-            exx
-            jp      (hl)
-            nop
-            jp      pe,$0103
-            cp      c
-            sbc     a,(hl)
-            cp      b
-            sbc     a,b
-            nop
-            adc     a,b
-            nop
-            inc     c
-            ret     nc
-            sbc     a,(hl)
-            nop
-            sub     h
-            or      a
-            cp      e
-            cp      b
-            ld      h,c
-            nop
-            rst     $08
-            ld      l,l
-            nop
-            inc     bc
-            ret     nc
-            ret     p
-            nop
-            jp      pe,$5003
-            cp      c
-            xor     a
-            or      (hl)
-            dec     sp
-            or      (hl)
-            ld      c,h
-            or      (hl)
-            and     h
-            nop
-            ld      l,l
-            nop
-            inc     bc
-            ret     nc
-            sub     c
-            ld      d,$6D
-            nop
-            ld      a,($60D0)
-            ld      d,$6D
-            nop
-            ld      ($60D0),a
-            ld      d,$6D
-            nop
-            inc     sp
-            ret     nc
-            ld      l,a
-            ld      d,$6D
-            nop
-            nop
-            cp      c
-            ld      e,l
-            or      l
-            ld      h,c
-            nop
-            rst     $08
-            ld      (hl),$B5
-            ld      h,c
-            or      l
-            ld      l,l
-            nop
-            ld      d,c
-            exx
-            jp      (hl)
-            nop
-            jp      pe,$5303
-            cp      c
-            sbc     a,(hl)
-            cp      b
-            sbc     a,b
-            nop
-            adc     a,b
-            nop
-            inc     c
-            ret     nc
-            halt
-            nop
-            ld      (bc),a
-            sub     h
-            or      a
-            sbc     a,b
-            nop
-            adc     a,b
-            nop
-            rra
-            ret     nc
-            halt
-            nop
-            inc     bc
-            sub     h
-            or      a
-            ld      l,l
-            nop
-            ld      a,($F0D0)
-            nop
-            halt
-            nop
-            inc     bc
-            ld      a,e
-            ld      bc,_0BRANCH
-            xor     a
-            cp      c
-            ld      l,l
-            nop
-            rrca
-            ret     nc
-            ret     p
-            nop
-            ld      l,l
-            nop
-            ld      ($F0D0),hl
-            nop
-            and     h
-            nop
-            jp      pe,$AD03
-            cp      c
-            cp      h
-            ld      bc,_0BRANCH
-            xor     c
-            cp      c
-            halt
-            nop
-            inc     bc
-            ld      l,l
-            nop
-            rrca
-            ret     nc
-            ld      a,a
-            ld      d,$E2
-            inc     bc
-            xor     a
-            cp      c
-            inc     de
-            inc     bc
-            cp      e
-            cp      b
-            ld      h,c
-            nop
+
+W_B71C:
+            DB      _ENTER
+            DW      _LITword
+            DW      $DDA0
+            DW      _at
+            DW      _RETURN
+
+;******************************************************************************************
+W_B725:
+            DB      _ENTER
+            DW      _LITbyte
+            DB      $05
+            DW      _0
+            DW      _DO
+            DW      _2DUP
+            DW      _I
+            DW      _LITbyte
+            DB      $03
+            DW      _star
+            DW      _plus
+            DW      $B6EA
+            DW      _0BRANCH
+            DW      $B78C
+            DW      _I
+            DW      _LITbyte
+            DB      $04
+            DW      _not_equal
+            DW      _0BRANCH
+            DW      $B76A
+            DW      _I
+            DW      _LITbyte
+            DB      $03
+            DW      _DO
+            DW      _DUP
+            DW      _I
+            DW      _LITbyte
+            DB      $03
+            DW      _star
+            DW      _plus
+            DW      _DUP
+            DW      _LITbyte
+            DB      $03
+            DW      _plus
+            DW      $B709
+            DW      _LITword
+            DW      $FFFF
+            DW      _plusLOOP
+            DW      _2DUP
+            DW      _I
+            DW      _LITbyte
+            DB      $03
+            DW      _star
+            DW      _plus
+            DW      _2DUP
+            DW      $B709
+            DW      _SWAP
+            DW      _LITbyte
+            DB      $03
+            DW      _plus
+            DW      _PWB
+            DW      _1
+            DW      _LITword
+            DW      $DD9E
+            DW      _bang
+            DW      _LEAVE
+            DW      _LOOP
+            DW      _DROP
+            DW      _DROP
+            DW      _RETURN
+
+;******************************************************************************************
+W_B794:
+            DB      _ENTER
+            DW      _LITword
+            DW      INITFB
+            DW      _Bat
+            DW      _less
+            DW      _0BRANCH
+            DW      $B7A7
+            DW      _HS4
+            DW      _BRANCH
+            DW      $B7A9
+            DW      _HS2
+            DW      W_B725
+            DW      _RETURN
+
+;******************************************************************************************
+W_B7AD:
+            DB      _ENTER
+            DW      W_B71C
+            DW      _0BRANCH
+            DW      $B7CD
+            DW      _LITbyte
+            DB      $80
+            DW      _star
+            DW      W_B71C
+            DW      _SWAP
+            DW      _minussign
+            DW      _LITword
+            DW      $DDA0
+            DW      _bang
+            DW      _EI
+            DW      $2F18
+            DW      _BRANCH
+            DW      $B7CF
+            DW      $3C62
+            DW      _RETURN
+
+;******************************************************************************************
+W_B7D1:
+            DB      _ENTER
+            DW      _LITbyte
+            DB      $FF
+            DW      _AND
+            DW      _DUP
+            DW      _LITbyte
+            DB      $03
+            DW      _BARRAY
+            DW      P1SCR
+            DW      _Bat
+            DW      _equal
+            DW      _0BRANCH
+            DW      $B7FE
+            DW      W_B71C
+            DW      _LITword
+            DW      $7800
+            DW      _LITword
+            DW      GORF_PLAYER1
+            DW      _LITword
+            DW      $0428
+            DW      _WRITEP
+            DW      _DROP
+            DW      _BRANCH
+            DW      $B81D
+            DW      _LITbyte
+            DB      $03
+            DW      _BARRAY
+            DW      P2SCR
+            DW      _Bat
+            DW      _equal
+            DW      _0BRANCH
+            DW      $B81D
+            DW      W_B71C
+            DW      _LITword
+            DW      $7800
+            DW      _LITword
+            DW      GORF_PLAYER2
+            DW      _LITword
+            DW      $0428
+            DW      _WRITEP
+            DW      _RETURN
+
+;******************************************************************************************
+W_B81F:
+            DB      _ENTER
+            DW      _LITbyte
+            DB      $13
+            DW      _INP
+            DW      _LITbyte
+            DB      $10
+            DW      _AND
+            DW      _zeroequal
+            DW      _0BRANCH
+            DW      $B832
+            DW      _1plus
+            DW      _RETURN
+
+;******************************************************************************************
+W_B834:
+            DB      _ENTER
+            DW      W_B71C
+            DW      _LITword
+            DW      $0428
+            DW      _ROT
+            DW      _INXMSG
+            DW      _CSPELL
+            DW      W_B7AD
+            DW      _RETURN
+
+;******************************************************************************************
+W_B845:
+            DB      _ENTER
+            DW      W_B81F
+            DW      W_B834
+            DW      _LITbyte
+            DB      $05
+            DW      _0
+            DW      _DO
+            DW      W_B71C
+            DW      _LITword
+            DW      $4B00
+            DW      _LITword
+            DW      $0428
+            DW      _LITbyte
+            DB      $04
+            DW      _PICK
+            DW      _LITbyte
+            DB      $03
+            DW      _I
+            DW      _star
+            DW      _plus
+            DW      _DUP
+            DW      W_B7D1
+            DW      _DISPBCD6
+            DW      _LITbyte
+            DB      $08
+            DW      W_B7AD
+            DW      _LOOP
+            DW      _DROP
+            DW      _RETURN
+
+;******************************************************************************************
+W_B87A:
+            DB      _ENTER
+            DW      _0
+            DW      _BARRAY
+            DW      HISCR2
+            DW      _LITbyte
+            DB      $0A
+            DW      _LITbyte
+            DB      $1E
+            DW      W_B845
+            DW      _LITbyte
+            DB      $02
+            DW      W_B7AD
+            DW      _0
+            DW      _BARRAY
+            DW      HISCR4
+            DW      _LITbyte
+            DB      $0A
+            DW      _LITbyte
+            DB      $20
+            DW      W_B845
+            DW      _RETURN
+
+;******************************************************************************************
+W_B89E:
+            DB      _ENTER
+            DW      _LITword
+            DW      P1HSP
+            DW      _P0
+            DW      _LITword
+            DW      P2HSP
+            DW      _P0
+            DW      _LITword
+            DW      $DD9E
+            DW      _ZERO
+            DW      _1
+            DW      _LITword
+            DW      $D097
+            DW      _Bbang
+            DW      _RETURN
+
+;******************************************************************************************
+W_B8BB:
+            DB      _ENTER
+            DW      _LITword
+            DW      COINS
+            DW      _P0
+            DW      _LITword
+            DW      DEMOMODE
+            DW      _P1
+            DW      _LITword
+            DW      PLAYERUP
+            DW      _P0
+            DW      _LITword
+            DW      $DD9E
+            DW      _at
+            DW      _0BRANCH
+            DW      $B8FA
+            DW      $B32C
+            DW      _LITword
+            DW      AMBUSY
+            DW      _BONE
+            DW      $B341
+            DW      _LITword
+            DW      $4000
+            DW      _LITword
+            DW      $DDA0
+            DW      _bang
+            DW      W_B87A
+            DW      LB69D
+            DW      _LITword
+            DW      $01C2
+            DW      $B5D1
+            DW      _0
+            DW      _FLOOD
+            DW      _0
+            DW      $1472
+            DW      _RETURN
+
+;******************************************************************************************
+LB900:
+            DB      _ENTER
+            DW      $B536
+            DW      $B561
+            DW      _LITword
+            DW      $D951
+            DW      _at
+            DW      _0BRANCH
+            DW      $B901
+            DW      W_B89E
+            DW      _0
+            DW      _BARRAY
+            DW      P1SCR
+            DW      _1
+            DW      W_B794
+            DW      W_B8BB
+            DW      _RETURN
+
+;******************************************************************************************
+W_B91F:
+            DB      _ENTER
+            DW      _LITword
+            DW      COINSIN
+            DW      _Bat
+            DW      _0BRANCH
+            DW      $B950
+            DW      $B6AF
+            DW      $B63B
+            DW      $B64C
+            DW      _DUP
+            DW      _LITword
+            DW      COINSIN
+            DW      _PSUB
+            DW      _LITword
+            DW      INITFB
+            DW      _PWB
+            DW      _LITword
+            DW      P1FBCTR
+            DW      _PWB
+            DW      _LITword
+            DW      P2FBCTR
+            DW      _P0
+            DW      _LITword
+            DW      LB900
+            DW      $B55D
+            DW      _RETURN
+
+;******************************************************************************************
+W_B952:
+            DB      _ENTER
+            DW      $B536
+            DW      $B561
+            DW      _LITword
+            DW      $D951
+            DW      _at
+            DW      _0BRANCH
+            DW      $B953
+            DW      W_B89E
+            DW      _0
+            DW      _BARRAY
+            DW      P1SCR
+            DW      _LITbyte
+            DB      $02
+            DW      W_B794
+            DW      _0
+            DW      _BARRAY
+            DW      P2SCR
+            DW      _LITbyte
+            DB      $03
+            DW      W_B794
+            DW      _LITword
+            DW      INITFB
+            DW      _Bat
+            DW      _LITbyte
+            DB      $03
+            DW      _not_equal
+            DW      _0BRANCH
+            DW      $B9AF
+            DW      _LITword
+            DW      P1HSP
+            DW      _Bat
+            DW      _LITword
+            DW      P2HSP
+            DW      _Bat
+            DW      _DUP
+            DW      _0BRANCH
+            DW      $B9AD
+            DW      _gt_equal
+            DW      _0BRANCH
+            DW      $B9A9
+            DW      _LITbyte
+            DB      $03
+            DW      _LITword
+            DW      P1HSP
+            DW      _PADD
+            DW      _BRANCH
+            DW      $B9AF
+            DW      _2DROP
+            DW      W_B8BB
+            DW      _RETURN
+
+;******************************************************************************************
+
 LB9B3:      rst     $08
             halt
             nop

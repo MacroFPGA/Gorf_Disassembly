@@ -2,7 +2,6 @@
 _Work_Area/
 cfg/
 src/zout/
-roms/
 
 # Compiled ROM binaries, lists, objects, and scripts
 *.bin
@@ -14,6 +13,8 @@ roms/
 *.py
 *.txt
 *.exe
+
+# Personal scratch files reserved for the repository maintainer
 *Ω*
 
 # System-generated files
@@ -25,3 +26,5 @@ Thumbs.db
 !build.bat
 !tools/
 !tools/.gitkeep
+!roms/sc01a.bin
+

@@ -21578,31 +21578,47 @@ W_B6D4:
             DW      _OUTP
             DW      _RETURN
 
-            DW      $D1D9
-            DW      $06E1
-            DW      $2303
-            DW      $1323
-            DW      $1A13
-            DW      $38BE
-            DW      $200B
-            DW      $2B04
-            DW      $101B
-            DW      $21F6
-            DW      COINBITR
-            DW      $0318
-            DW      $0121
-            DW      $E500
-            DW      $FDD9
-            DW      $D9E9
-            DW      $D1E1
-            DW      $0306
-            DW      $D51A
-            DW      $CD5F
-            DW      wpb_bang
-            DW      $23D1
-            DW      $1013
-            DW      $D9F5
+;******************************************************************************************
+CHECKSCORE:
+            exx
+            pop     de
+            pop     hl
+            ld      b,$03
+            inc     hl
+            inc     hl
+            inc     de
+            inc     de
+            ld      a,(de)
+            cp      (hl)
+            jr      c,$B702
+            jr      nz,$B6FD
+            dec     hl
+            dec     de
+            djnz    $B6F3
+            ld      hl,$0000
+            jr      $B705
+            ld      hl,$0001
+            push    hl
+            exx
             DW      _DSPATCH
+              	
+;******************************************************************************************
+WRITESCORE:
+            exx
+            pop     hl
+            pop     de
+            ld      b,$03
+            ld      a,(de)
+            push    de
+            ld      e,a
+            call    wpb_bang            ; Write byte to protected memory
+            pop     de
+            inc     hl
+            inc     de
+            djnz    $B70E
+            exx
+            DW      _DSPATCH
+
 ;******************************************************************************************
 W_B71C:
             DB      _ENTER
@@ -21612,31 +21628,36 @@ W_B71C:
             DW      _RETURN
 
 ;******************************************************************************************
-W_B725:
-            DB      _ENTER
+; Check score against high score table - insert score if good enough
+;******************************************************************************************
+
+SCANHST:
+            DB      _ENTER              ; Player score and Address of relevant high score table on stack
             DW      _LITbyte
             DB      $05
             DW      _0
             DW      _DO                 ; Start loop I - 0 to 4
-            DW      _2DUP
-            DW      _I
+            DW      _2DUP               ; Make copy of passed variables
+            DW      _I                  ; Loop Counter
             DW      _LITbyte
             DB      $03
-            DW      _star
-            DW      _plus
-            DW      $B6EA
-            DW      _0BRANCH
-            DW      $B78C
-            DW      _I
+            DW      _star               ; * 3
+            DW      _plus               ; add to base address of array
+            DW      CHECKSCORE          ; Compare against this High Score entry
+            DW      _0BRANCH            ; Lower, so next loop
+            DW      scanhstlp
+
+            DW      _I                  ; is the score position the final one
             DW      _LITbyte
             DB      $04
-            DW      _not_equal
-            DW      _0BRANCH
-            DW      $B76A
-            DW      _I
+            DW      _not_equal		; pushes a 1 if I not equal 4
+            DW      _0BRANCH            ; but branches if 0 on stack
+            DW      scanhst0            ; I=4 so replace final score
+
+            DW      _I			
             DW      _LITbyte
             DB      $03
-            DW      _DO
+            DW      _DO                 ; start new loop from I to 3
             DW      _DUP
             DW      _I
             DW      _LITbyte
@@ -21647,18 +21668,18 @@ W_B725:
             DW      _LITbyte
             DB      $03
             DW      _plus
-            DW      $B709
+            DW      WRITESCORE
             DW      _LITword
             DW      $FFFF
             DW      _plusLOOP
-            DW      _2DUP
+scanhst0:   DW      _2DUP
             DW      _I
             DW      _LITbyte
             DB      $03
             DW      _star
             DW      _plus
             DW      _2DUP
-            DW      $B709
+            DW      WRITESCORE
             DW      _SWAP
             DW      _LITbyte
             DB      $03
@@ -21669,7 +21690,7 @@ W_B725:
             DW      $DD9E
             DW      _bang
             DW      _LEAVE
-            DW      _LOOP
+scanhstlp:  DW      _LOOP
             DW      _DROP
             DW      _DROP
             DW      _RETURN
@@ -21689,7 +21710,7 @@ GETHSARRAY:
             DW      _BRANCH
             DW      geths1
 geths0:     DW      _HS2
-geths1:     DW      W_B725
+geths1:     DW      SCANHST             ; Check to see if score makes table
             DW      _RETURN
 
 ;******************************************************************************************

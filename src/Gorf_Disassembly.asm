@@ -53,16 +53,16 @@
 ;   GORF v2 ROM CHECKSUMS
 ;   ---------------------
 ;
-;   ROM File      CRC32       SHA1
+;   ROM File    CRC32       SHA1
 ;   -----------------------------------------------------------------------------------------
-;   gorf-a.bin    5b348321    76e2e3ad1a66755f1a369167fdb157690fd44a52
-;   gorf-b.bin    62d6de77    2601faf12d0ab4972c5535ffd722b03ecd8c097c
-;   gorf-c.bin    1d3bc9c9    0b363a71d7585a4828e08668ebb2999c55e02721
-;   gorf-d.bin    70046e56    392214cc6ed4155bfe022d36f0f86c2594a5ab57
-;   gorf-e.bin    2d456eb5    720fb8b48e20c1fc281d8804259016c3c5364a07
-;   gorf-f.bin    f7e4e155    9c9d6d3bfee6556dc7a01de81d6148dd02f04fc9
-;   gorf-g.bin    4e2bd9b9    9edccceea5af015275582553ed238c40c73d8f4f
-;   gorf-h.bin    fe7b863d    5aa8d824814ee1c30eaf0044da78d3aa8220dcaa
+;   gorf-a.bin  5b348321    76e2e3ad1a66755f1a369167fdb157690fd44a52
+;   gorf-b.bin  62d6de77    2601faf12d0ab4972c5535ffd722b03ecd8c097c
+;   gorf-c.bin  1d3bc9c9    0b363a71d7585a4828e08668ebb2999c55e02721
+;   gorf-d.bin  70046e56    392214cc6ed4155bfe022d36f0f86c2594a5ab57
+;   gorf-e.bin  2d456eb5    720fb8b48e20c1fc281d8804259016c3c5364a07
+;   gorf-f.bin  f7e4e155    9c9d6d3bfee6556dc7a01de81d6148dd02f04fc9
+;   gorf-g.bin  4e2bd9b9    9edccceea5af015275582553ed238c40c73d8f4f
+;   gorf-h.bin  fe7b863d    5aa8d824814ee1c30eaf0044da78d3aa8220dcaa
 ;
 ;******************************************************************************************
 ;   COLD START of the game. This section just jumps over the RST $08
@@ -105,7 +105,7 @@ _ENTER      EQU     $CF                 ; $CF is hex for RST $08.
 
 WARMSTRT:   di                          ; Warmstart the machine.
                                         ; Actual initialization begins here. COLDSTRT ($0000)
-                                        ;jumps to this label to safely bypass the TERSE
+                                        ; jumps to this label to safely bypass the TERSE
                                         ; _ENTER vector located at $0008.
 
             im      0
@@ -163,9 +163,11 @@ WARMSTRT:   di                          ; Warmstart the machine.
             ld      iy,DSPATCH          ; Dispatcher
 
 ;******************************************************************************************
-; ---->   DSPATCH   Fetches, decodes, and executes the
+; ---->  DSPATCH    Fetches, decodes, and executes the
 ;                   next Terse instruction. Updates (BC) to
 ;                   point to the subsequent instruction.
+;                   (Note: This is the engine's internal equivalent of the standard
+;                   TERSE verb 'NEXT').
 ;
 ;   The _DSPATCH label is a special case. Unlike most Terse words, it directly holds the Z80
 ;   instruction JP (IY).  This disguise ensures that Terse instructions visually ends with a
@@ -186,6 +188,7 @@ DSPATCH:    ld      a,(bc)              ; Actual DSPATCH keyword code
 
 ;******************************************************************************************
 ; ----> RETURN      Exits the current Terse word, returns to dispatcher.
+;                   (Note: This is the internal runtime execution routine for the ';' verb).
 ;******************************************************************************************
 
 _RETURN:    ld      c,(ix+$00)
@@ -195,11 +198,10 @@ _RETURN:    ld      c,(ix+$00)
             DW      _DSPATCH
 
 ;******************************************************************************************
-; ----> LITword     Get contents of next two addresses (literal value) and push to
-;                   the parameter stack.
+; ----> LIT         Compiled primitive to push next 16-bit word literal onto stack.
 ;******************************************************************************************
 
-_LITword:   ld      a,(bc)
+_LIT:       ld      a,(bc)
             inc     bc
             ld      l,a
             ld      a,(bc)
@@ -210,7 +212,7 @@ _LITword:   ld      a,(bc)
 
 ;******************************************************************************************
 ; ----> LITbyte     Gets the byte at the next address (literal value) and pushes it
-;                   to the parameter stack.
+;                   to the parameter stack. (Custom engine optimization - Not in TERSE Vocabulary).
 ;******************************************************************************************
 
 _LITbyte:   ld      a,(bc)
@@ -221,23 +223,22 @@ _LITbyte:   ld      a,(bc)
             DW      _DSPATCH
 
 ;******************************************************************************************
-; ----> LITquad     Gets the contents of the next four addresses (two literal words)
-;                   and pushes them to the parameter stack.
+; ----> DLIT        Primitive compiled before 32-bit double literals. (Gets contents of
+;                   the next four addresses and pushes them to the parameter stack).
 ;******************************************************************************************
-
-_LITquad:   ld      a,(bc)
+_DLIT:      ld      a,(bc)
             inc     bc
             ld      l,a
             ld      a,(bc)
             inc     bc
             ld      h,a
             push    hl
-            jp      _LITword
+            jp      _LIT
 
 ;******************************************************************************************
-; ----> _BARRAY     Takes an index 'i' from the stack, retrieves the base address of the
-;                   byte array from the instruction stream, and pushes the memory address
-;                   of the i-th byte (base_address + i) to the stack.
+; ----> _BARRAY     Runtime execution behavior for BARRAY: Takes an index 'i' from the stack,
+;                   retrieves the base address of the byte array from the instruction stream,
+;                   and pushes the memory address of the i-th byte (base_address + i) to the stack.
 ;******************************************************************************************
 
 _BARRAY:    pop     hl
@@ -2633,11 +2634,11 @@ _ICSPOST:   DB      _ENTER              ; Enter TERSE execution
 ;******************************************************************************************
 _GNAME:     DB      _ENTER              ; Enter TERSE execution
             DW      _gtR                ; >R (Save string index to Return stack)
-            DW      _LITword            ; \
+            DW      _LIT            ; \
             DW      $0100               ; / Push X coordinate ($100)
-            DW      _LITword            ; \
+            DW      _LIT            ; \
             DW      $5000               ; / Push Y coordinate ($5000)
-            DW      _LITword            ; \
+            DW      _LIT            ; \
             DW      $0408               ; / Push Exp/Mag attributes ($408)
             DW      _Rgt                ; R> (Retrieve string index from Return stack)
             DW      _ICSPOST            ; Call ICSPOST to draw the string
@@ -2708,7 +2709,7 @@ _XUP:       DB      _ENTER              ; Enter TERSE execution
 ;******************************************************************************************
 _SPELL:     DB      _ENTER              ; Enter TERSE execution
             DW      _INXMSG             ; Convert string index to address
-            DW      _LITword            ; \
+            DW      _LIT            ; \
             DW      $0428               ; / Push Exp/Mag attributes ($0428)
             DW      _SWAP               ; Swap string address and attributes
             DW      _CSPELL             ; Draw the centered string
@@ -4675,13 +4676,13 @@ SPK_BETCHA:
 RKTBL:      DW      SPK_CADET, SPK_CAPT, SPK_COLONEL, SPK_GENERAL, SPK_WARRIOR, SPK_AVENGER
 
 _GETRANK:   DB      _ENTER              ; Enter TERSE execution
-            DW      _LITword            ;
+            DW      _LIT            ;
             DW      SKILLFACTOR         ; / Push address of SKILLFACTOR ($D037)
             DW      _Bat                ; B@ (Fetch player's rank/difficulty byte)
             DW      _LITbyte            ;
             DB      $05                 ; / Push literal byte 5 (Max Rank = Avenger)
             DW      _MIN                ; MIN (Cap the rank at 5)
-            DW      _LITword            ;
+            DW      _LIT            ;
             DW      SPK_SPACE           ; / Push address $1185 ('SPACE TALK PRIM)
             DW      _SPEAK              ; SPEAK (Speak the primitive at $1185)
             DW      _ARRAY              ; ARRAY (Use the capped rank to index into a word array...)
@@ -4709,7 +4710,7 @@ AM_FX:      DB      $02,$56,$13
 
 W_136D:
             DB      _ENTER
-            DW      _LITword
+            DW      _LIT
             DW      L1354
             DW      _B2MUSIC
             DW      _RETURN
@@ -4768,11 +4769,11 @@ _SPKGENERIC:
             DW      _RND
             DW      _0BRANCH
             DW      generic0
-            DW      _LITword
+            DW      _LIT
             DW      SPK_TOOBAD
             DW      _BRANCH
             DW      generic1
-generic0:   DW      _LITword
+generic0:   DW      _LIT
             DW      SPK_BITE
 generic1:   DW      _SPEAK
             DW      _GETRANK
@@ -4799,7 +4800,7 @@ INSULTS:    DW      SPK_HAHA
 
 _SPKINSULT:
             DB      _ENTER
-            DW      _LITword
+            DW      _LIT
             DW      $D12A
             DW      _LITbyte
             DB      $06
@@ -4885,7 +4886,7 @@ DONULL:     DB      _ENTER
 ;******************************************************************************************
 
             DB      _ENTER
-            DW      _LITword
+            DW      _LIT
             DW      $0100
             DW      _star
 
@@ -6247,16 +6248,16 @@ zeroscore0: call    wpb_bang            ; Write byte to protected memory
             sub     a
             ret     nc
             inc     bc
-            ld      bc,_LITword
+            ld      bc,_LIT
             sbc     a,c
             ret     nc
             inc     bc
-            ld      bc,_LITword
+            ld      bc,_LIT
             sbc     a,l
             ret     nc
             inc     bc
             ld      bc,$0076
-            ld      hl,_LITword
+            ld      hl,_LIT
             sub     c
             ret     nc
             rst     $30
@@ -7647,7 +7648,7 @@ GORF_UNK6:
             djnz    $289E
             nop
             inc     b
-            ld      (_LITword),hl
+            ld      (_LIT),hl
             jr      z,$283C
             xor     c
             ld      b,$61
@@ -9510,7 +9511,7 @@ GORF_UNK6:
             nop
             ld      (de),a
             jp      (hl)
-            ld      (_LITword),a
+            ld      (_LIT),a
             ld      ($F0D0),a
             nop
             jp      pe,$8503
@@ -9693,18 +9694,18 @@ _setrel:    DB      _ENTER
             DW     _BARRAY
             DW     FFRELABS
             DW     _Bbang
-            DW     _LITword             ; get the value of COCKTAIL
+            DW     _LIT             ; get the value of COCKTAIL
             DW     COCKTAIL
             DW     _Bat
             DW     _0BRANCH             ; branch if zero to set normal vectors
             DW     setrel0
-            DW     _LITword
+            DW     _LIT
             DW     cockrel
             DW     _1                   ; get address for 1st element of byte array
             DW     _BARRAY
             DW     RELABS
             DW     _bang                ; write address of COCKREL
-            DW     _LITword
+            DW     _LIT
             DW     cockff
             DW     _1
             DW     _BARRAY
@@ -9712,13 +9713,13 @@ _setrel:    DB      _ENTER
             DW     _bang                ; this time writing address of COCKFF
             DW     _BRANCH              ; finished cocktail vectors so branch to end
             DW     setrel1
-setrel0:    DW     _LITword             ; same as above, but normal vectors
+setrel0:    DW     _LIT             ; same as above, but normal vectors
             DW     norrel
             DW     _1
             DW     _BARRAY
             DW     RELABS               ; set to NORREL
             DW     _bang
-            DW     _LITword
+            DW     _LIT
             DW     ffnorrel
             DW     _1
             DW     _BARRAY
@@ -9822,38 +9823,38 @@ setrel1:    DW     _RETURN
 ;******************************************************************************************
 _STARTGAME:
             DB      _ENTER              ; Enter TERSE execution
-            DW      _LITword            ;
+            DW      _LIT            ;
             DW      P1SCR               ; / Push address of P1SCR ($D00C)
             DW      _ZEROSCORE           ; ZEROSCORE (Clears 3 BCD score bytes)
-            DW      _LITword            ;
+            DW      _LIT            ;
             DW      P2SCR               ; / Push address of P2SCR ($D01F)
             DW      _ZEROSCORE           ; ZEROSCORE (Clears 3 BCD score bytes)
-            DW      _LITword            ;
+            DW      _LIT            ;
             DW      $2800               ; / Push literal $2800 (P1 Score Screen Offset)
-            DW      _LITword            ;
+            DW      _LIT            ;
             DW      $D086               ; / Push address $D086
             DW      _bang               ; ! (Store $2800 into $D086)
-            DW      _LITword            ;
+            DW      _LIT            ;
             DW      $6400               ; / Push literal $6400 (P2 Score Screen Offset)
-            DW      _LITword            ;
+            DW      _LIT            ;
             DW      $D088               ; / Push address $D088
             DW      _bang               ; ! (Store $6400 into $D088)
-            DW      _LITword            ;
+            DW      _LIT            ;
             DW      MISSIONCTR          ; / Push address of MISSIONCTR ($D036)
             DW      _P1                 ; WPBONE (Write Protect 1 - Set Mission to 1)
             DW      _LITbyte            ;
             DB      $02                 ; / Push literal $02 (Initial Fire Bases)
-            DW      _LITword            ;
+            DW      _LIT            ;
             DW      P1FBCTR             ; / Push address of P1FBCTR ($D032)
             DW      _PWB                ; WPB! (Store 2 into Player 1 Fire Base count)
-            DW      _LITword            ;
+            DW      _LIT            ;
             DW      PLAYERUP            ; / Push address of PLAYERUP ($D038)
             DW      _P0                 ; WPBZERO (Set active player to Player 1)
-            DW      _LITword            ;
+            DW      _LIT            ;
             DW      NPLAYERS            ; / Push address of NPLAYERS ($D039)
             DW      _P0                 ; WPBZERO (Reset to 1-Player mode)
             DW      SHUTUP              ; SHUTUP (Silence audio hardware)
-            DW      _LITword            ;
+            DW      _LIT            ;
             DW      SKILLFACTOR         ; / Push address of SKILLFACTOR ($D037)
             DW      _P0                 ; WPBZERO (Reset Rank/Difficulty)
             DW      _RETURN             ; ; (End of STARTGAME routine)
@@ -12232,7 +12233,7 @@ ASTRO_BATTLES_INVADER_BULLET_2:
             djnz    $8238
             nop
             nop
-            ld      (_LITword),hl
+            ld      (_LIT),hl
             rla
             add     a,b
             halt
@@ -12347,7 +12348,7 @@ ASTRO_BATTLES_INVADER_BULLET_2:
             jr      nz,$82C6
             nop
             nop
-            ld      (_LITword),hl
+            ld      (_LIT),hl
             ld      b,c
             add     a,b
             halt
@@ -12471,7 +12472,7 @@ ASTRO_BATTLES_INVADER_BULLET_2:
             jr      nc,$835D
             nop
             nop
-            ld      (_LITword),hl
+            ld      (_LIT),hl
             ld      (hl),e
             add     a,b
             halt
@@ -13201,7 +13202,7 @@ ASTRO_BATTLES_INVADER_BULLET_2:
             ld      l,l
             nop
             nop
-            ld      bc,_LITword
+            ld      bc,_LIT
             nop
             ld      d,b
             ld      l,l
@@ -13263,7 +13264,7 @@ ASTRO_BATTLES_INVADER_BULLET_2:
             ld      l,l
             nop
             nop
-            call    m,_LITword
+            call    m,_LIT
             cp      e
             exx
             rst     $30
@@ -13327,7 +13328,7 @@ ASTRO_BATTLES_INVADER_BULLET_2:
             nop
             sbc     a,h
             DB      $dd,$03
-            ld      bc,_LITword
+            ld      bc,_LIT
             cp      $FF
             or      l
             scf
@@ -13392,7 +13393,7 @@ ASTRO_BATTLES_INVADER_BULLET_2:
             xor     e
             exx
             inc     bc
-            ld      bc,_LITword
+            ld      bc,_LIT
             inc     (hl)
             add     a,e
             ld      l,l
@@ -13521,7 +13522,7 @@ ASTRO_BATTLES_INVADER_BULLET_2:
             nop
             inc     b
             dec     bc
-            ld      bc,_LITword
+            ld      bc,_LIT
             ld      l,b
             rst     $18
             jp      (hl)
@@ -13539,7 +13540,7 @@ ASTRO_BATTLES_INVADER_BULLET_2:
             jp      (hl)
             nop
             dec     bc
-            ld      bc,_LITword
+            ld      bc,_LIT
             ld      l,d
             rst     $18
             jp      (hl)
@@ -13641,7 +13642,7 @@ ASTRO_BATTLES_INVADER_BULLET_2:
             ld      l,l
             nop
             or      d
-            ld      bc,_LITword
+            ld      bc,_LIT
             ld      h,(hl)
             rst     $18
             jp      (hl)
@@ -13818,7 +13819,7 @@ ASTRO_BATTLES_INVADER_BULLET_2:
             nop
             ld      (bc),a
             jp      (hl)
-            ld      (_LITword),a
+            ld      (_LIT),a
             rst     $38
             rst     $38
             sub     a
@@ -18098,7 +18099,7 @@ SPACE_WARP_WHITE_OBJECT_LARGE_2:
             sbc     a,a
             halt
             nop
-            ld      de,_LITword
+            ld      de,_LIT
             and     c
             ret     nc
             ret     nc
@@ -18265,7 +18266,7 @@ SPACE_WARP_WHITE_OBJECT_LARGE_2:
             ld      e,b
             dec     b
             dec     bc
-            ld      bc,_LITword
+            ld      bc,_LIT
             adc     a,d
             ret     nc
             ret     p
@@ -18413,7 +18414,7 @@ SPACE_WARP_WHITE_OBJECT_LARGE_2:
             ld      l,l
             nop
             nop
-            ld      (_LITword),a
+            ld      (_LIT),a
             nop
             ld      h,h
             sub     e
@@ -18431,7 +18432,7 @@ SPACE_WARP_WHITE_OBJECT_LARGE_2:
             ld      l,l
             nop
             nop
-            ld      (_LITword),a
+            ld      (_LIT),a
             ret
             call    c,$00F7
             ld      l,l
@@ -18726,7 +18727,7 @@ SPACE_WARP_WHITE_OBJECT_LARGE_2:
             ld      l,l
             nop
             nop
-            ld      (_LITword),a
+            ld      (_LIT),a
             nop
             ld      h,h
             sub     e
@@ -18734,7 +18735,7 @@ SPACE_WARP_WHITE_OBJECT_LARGE_2:
             ld      l,l
             nop
             nop
-            ld      (_LITword),a
+            ld      (_LIT),a
             ret
             call    c,$00F7
             ld      l,l
@@ -20631,7 +20632,7 @@ FLAG_SHIP_FIREBALL_FULL:
             nop
             ld      b,b
             jp      (hl)
-            ld      (_LITword),a
+            ld      (_LIT),a
             adc     a,d
             ret     nc
             ret     p
@@ -20754,7 +20755,7 @@ FLAG_SHIP_FIREBALL_FULL:
             and     c
             ret     nc
             inc     bc
-            ld      bc,_LITword
+            ld      bc,_LIT
             scf
             ret     nc
             ret     p
@@ -20847,7 +20848,7 @@ FLAG_SHIP_FIREBALL_FULL:
             ld      l,l
             nop
             or      d
-            ld      bc,_LITword
+            ld      bc,_LIT
             xor     h
             jp      (ix)
             nop
@@ -20873,7 +20874,7 @@ FLAG_SHIP_FIREBALL_FULL:
             ld      l,l
             nop
             or      d
-            ld      bc,_LITword
+            ld      bc,_LIT
             xor     (hl)
             jp      (ix)
             nop
@@ -21063,7 +21064,7 @@ LB35C:      exx
 ;******************************************************************************************
 W_B365:
             DB      _ENTER
-            DW      _LITword
+            DW      _LIT
             DW      MISSION
             DW      _Bat
             DW      _1minus
@@ -21079,7 +21080,7 @@ W_B365:
 ;******************************************************************************************
 W_B37E:
             DB      _ENTER
-            DW      _LITword
+            DW      _LIT
             DW      $2000
             DW      _0
             DW      _LITbyte
@@ -21098,7 +21099,7 @@ W_B37E:
             DW      $3FD4
             DW      _LOOP
             DW      _2DROP
-            DW      _LITword
+            DW      _LIT
             DW      $0400
             DW      _0
             DW      _DO
@@ -21117,7 +21118,7 @@ W_B37E:
 ;##########################################################################################
 ;       DATA 'PUSH TALK PRIM
 ;       P OO1 IU SH PA1 AY Y1 P L PA2 AY ER PA0 pB UH1 DT T EH2 N N PA1 ENDPRIM
-;##########################################################################################      
+;##########################################################################################
 SPK_PUSH:
             DB      $15
             DB      $25,$16,$76,$51,$06,$21,$22,$25
@@ -21127,7 +21128,7 @@ SPK_PUSH:
 ;##########################################################################################
 ;       DATA 'DOOM TALK PRIM
 ;       Y1 IU U1 U1 W I1 L M pE pE1 T pA1 pE1 G DT O1 R pF Y pA1 N pD U1 U M PA1 ENDPRIM
-;##########################################################################################      
+;##########################################################################################
 SPK_DOOM:
             DB      $1A
             DB      $22,$36,$77,$77,$2D,$0B,$58,$0C
@@ -21138,7 +21139,7 @@ SPK_DOOM:
 ;##########################################################################################
 ;       DATA 'SURVIVAL TALK PRIM
 ;       S ER V AH2 I1 Y1 V UH3 L I1 S PA0 I1 M P AH1 S I1 pB L PA1 ENDPRIM
-;##########################################################################################      
+;##########################################################################################
 SPK_SURVIVAL:
             DB      $15
             DB      $5F,$7A,$0F,$08,$0B,$62,$4F,$23
@@ -21147,9 +21148,9 @@ SPK_SURVIVAL:
 
 ;##########################################################################################
 ;       DATA 'ROBOWARRIOR TALK PRIM
-;       R O1 U1 pB AH1 T W O R AY Y1 EH3 R S PA1 S pE K0 
+;       R O1 U1 pB AH1 T W O R AY Y1 EH3 R S PA1 S pE K0
 ;       pAE1 EH3 N pD pD pE1 S T R O1 I1 Y THV UH ENDPRIM
-;##########################################################################################      
+;##########################################################################################
 SPK_ROBOWARRIOR:
             DB      $20
             DB      $2B,$75,$77,$0E,$15,$2A,$2D,$66
@@ -21159,9 +21160,9 @@ SPK_ROBOWARRIOR:
 
 ;##########################################################################################
 ;       DATA 'GORFIAN TALK PRIM
-;       M AH2 I1 Y G DT O1 R pF Y pA1 N PA0 R O1 U1 pB AH1 T S 
+;       M AH2 I1 Y G DT O1 R pF Y pA1 N PA0 R O1 U1 pB AH1 T S
 ;       PA0 AH1 R UH2 N pB pE1 AY T UH3 pB L PA1 ENDPRIM
-;##########################################################################################      
+;##########################################################################################
 SPK_GORFIAN:
             DB      $22
             DB      $0C,$08,$4B,$69,$1C,$04,$75,$6B
@@ -21174,7 +21175,7 @@ SPK_GORFIAN:
 ;       DATA 'IAM TALK PRIM
 ;       AH1 I1 Y pAE1 EH2 M THV UH G DT O1 R pF Y pA1 N
 ;       PA0 K0 AH1 N CH EH S N EH S PA1 ENDPRIM
-;##########################################################################################      
+;##########################################################################################
 SPK_IAM:
 
             DB      $1B
@@ -21185,9 +21186,9 @@ SPK_IAM:
 
 ;##########################################################################################
 ;       DATA 'PREPARE TALK PRIM
-;       P R pE1 P pAE1 ER Y U1 O1 R S EH1 L pF PA0 pF O1 R PA0 
+;       P R pE1 P pAE1 ER Y U1 O1 R S EH1 L pF PA0 pF O1 R PA0
 ;       UH1 N AH2 I1 Y H pA1 SH UH2 N PA1 ENDPRIM
-;##########################################################################################      
+;##########################################################################################
 SPK_PREPARE:
 
             DB      $1E
@@ -21201,18 +21202,18 @@ SPK_PREPARE:
 ;******************************************************************************************
 SPKCOIN:
             DB      _ENTER
-            DW      _LITword
+            DW      _LIT
             DW      $D124
             DW      _Bat
             DW      _zeroequal
             DW      _0BRANCH
             DW      spkcoin2
-            DW      _LITword
+            DW      _LIT
             DW      COINSIN
             DW      _Bat
             DW      _0BRANCH
             DW      spkcoin2
-            DW      _LITword
+            DW      _LIT
             DW      AMBUSY
             DW      _BONE
             DW      _LITbyte
@@ -21220,11 +21221,11 @@ SPKCOIN:
             DW      _RND
             DW      _0BRANCH
             DW      spkcoin0
-            DW      _LITword
+            DW      _LIT
             DW      SPK_PUSH            ; Push a player button
             DW      _BRANCH
             DW      spkcoin1
-spkcoin0:   DW      _LITword
+spkcoin0:   DW      _LIT
             DW      SPK_LONG
 spkcoin1:   DW      _SPEAK
 spkcoin2:   DW      _RETURN
@@ -21232,19 +21233,19 @@ spkcoin2:   DW      _RETURN
 ;******************************************************************************************
 SPEAKGORF:
             DB      _ENTER
-            DW      _LITword
+            DW      _LIT
             DW      SPK_GORF
             DW      _RETURN
 ;******************************************************************************************
 SPEAKROBOTS:
             DB      _ENTER
-            DW      _LITword
+            DW      _LIT
             DW      SPK_ROBOTS
             DW      _RETURN
 ;******************************************************************************************
 SPEAKDOOM:
             DB      _ENTER
-            DW      _LITword
+            DW      _LIT
             DW      SPK_DOOM
             DW      _SPEAK
             DW      _GETRANK
@@ -21252,7 +21253,7 @@ SPEAKDOOM:
 ;******************************************************************************************
 SPEAKSURVIVAL:
             DB      _ENTER
-            DW      _LITword
+            DW      _LIT
             DW      SPK_SURVIVAL
             DW      _SPEAK
             DW      _GETRANK
@@ -21260,13 +21261,13 @@ SPEAKSURVIVAL:
 ;******************************************************************************************
 SPEAKESCAPE:
             DB      _ENTER
-            DW      _LITword
+            DW      _LIT
             DW      SPK_ESCAPE
             DW      _RETURN
 ;******************************************************************************************
 SPEAKROBOWARRIOR:
             DB      _ENTER
-            DW      _LITword
+            DW      _LIT
             DW      SPK_ROBOWARRIOR
             DW      _SPEAK
             DW      _GETRANK
@@ -21274,19 +21275,19 @@ SPEAKROBOWARRIOR:
 ;******************************************************************************************
 SPEAKGORFIAN:
             DB      _ENTER
-            DW      _LITword
+            DW      _LIT
             DW      SPK_GORFIAN
             DW      _RETURN
 ;******************************************************************************************
 SPEAKIAM:
             DB      _ENTER
-            DW      _LITword
+            DW      _LIT
             DW      SPK_IAM
             DW      _RETURN
 ;******************************************************************************************
 SPEAKPREPARE:
             DB      _ENTER
-            DW      _LITword
+            DW      _LIT
             DW      SPK_PREPARE
             DW      _SPEAK
             DW      _GETRANK
@@ -21294,13 +21295,13 @@ SPEAKPREPARE:
 ;******************************************************************************************
 SPEAKPRIS:
             DB      _ENTER
-            DW      _LITword
+            DW      _LIT
             DW      SPK_PRIS
             DW      _RETURN
 ;******************************************************************************************
 SPEAKSTART:
             DB      _ENTER
-            DW      _LITword
+            DW      _LIT
             DW      $D129
             DW      _LITbyte
             DB      $0A
@@ -21325,7 +21326,7 @@ W_B536:
             DW      _0
             DW      _FLOOD
             DW      LB35C
-            DW      _LITword
+            DW      _LIT
             DW      SKILLFACTOR
             DW      _Bat
             DW      $3CBB
@@ -21346,19 +21347,19 @@ W_B536:
 ;******************************************************************************************
 W_B561:
             DB      _ENTER
-            DW      _LITword
+            DW      _LIT
             DW      $D951
             DW      _at
             DW      _zeroequal
             DW      _0BRANCH
             DW      $B5CF
-            DW      _LITword
+            DW      _LIT
             DW      MISSIONCTR
             DW      _BCDBUMP
-            DW      _LITword
+            DW      _LIT
             DW      MISSION
             DW      _PINC
-            DW      _LITword
+            DW      _LIT
             DW      MISSION
             DW      _Bat
             DW      _LITbyte
@@ -21366,7 +21367,7 @@ W_B561:
             DW      _equal
             DW      _0BRANCH
             DW      $B5CF
-            DW      _LITword
+            DW      _LIT
             DW      SKILLFACTOR
             DW      _Bat
             DW      _zeroequal
@@ -21380,26 +21381,26 @@ W_B561:
             DW      _AND
             DW      _0BRANCH
             DW      $B5C3
-            DW      _LITword
+            DW      _LIT
             DW      P1FBCTR
             DW      _Bat
             DW      _0BRANCH
             DW      $B5B3
-            DW      _LITword
+            DW      _LIT
             DW      P1FBCTR
             DW      _PINC
-            DW      _LITword
+            DW      _LIT
             DW      P2FBCTR
             DW      _Bat
             DW      _0BRANCH
             DW      $B5C3
-            DW      _LITword
+            DW      _LIT
             DW      P2FBCTR
             DW      _PINC
-            DW      _LITword
+            DW      _LIT
             DW      SKILLFACTOR
             DW      _PINC
-            DW      _LITword
+            DW      _LIT
             DW      MISSION
             DW      _P1
             DW      _RETURN
@@ -21407,12 +21408,12 @@ W_B561:
 ;******************************************************************************************
 W_B5D1:
             DB      _ENTER
-            DW      _LITword
+            DW      _LIT
             DW      $D09F
             DW      _bang
             DW      $288B
             DW      $2F18
-            DW      _LITword
+            DW      _LIT
             DW      $D09F
             DW      _at
             DW      _zeroequal
@@ -21435,7 +21436,7 @@ W_B5EA:
             DW      _XUP
             DW      _LITbyte
             DB      $04
-            DW      _LITword
+            DW      _LIT
             DW      PLAYERUP
             DW      _Bat
             DW      _minussign
@@ -21482,7 +21483,7 @@ W_B63B:
 W_B64C:
             DB      _ENTER
             DW      W_B63B
-            DW      _LITword
+            DW      _LIT
             DW      COINSIN
             DW      _Bat
             DW      _1
@@ -21500,7 +21501,7 @@ W_B64C:
 W_B66A:
             DB      _ENTER
             DW      W_B63B
-            DW      _LITword
+            DW      _LIT
             DW      COINSIN
             DW      _Bat
             DW      _LITbyte
@@ -21537,7 +21538,7 @@ W_B69D:
             DW      $B6AD
             DW      _LITbyte
             DB      $04
-            DW      _LITword
+            DW      _LIT
             DW      COINSIN
             DW      _PWB
             DW      _RETURN
@@ -21545,27 +21546,27 @@ W_B69D:
 W_B6AF:
             DB      _ENTER
             DW      _STARTGAME
-            DW      _LITword
+            DW      _LIT
             DW      DEMOMODE
             DW      _P0
             DW      _1
-            DW      _LITword
+            DW      _LIT
             DW      $D0AF
             DW      _Bbang
-            DW      _LITword
+            DW      _LIT
             DW      MISSION
             DW      _P1
-            DW      _LITword
+            DW      _LIT
             DW      $D951
             DW      _ZERO
-            DW      _LITword
+            DW      _LIT
             DW      RIP
             DW      _P0
             DW      _RETURN
 ;******************************************************************************************
 W_B6D4:
             DB      _ENTER
-            DW      _LITword
+            DW      _LIT
             DW      $B2F9
             DW      _COLOR
             DW      _LITbyte
@@ -21622,7 +21623,7 @@ WRITESCORE:
 ;******************************************************************************************
 W_B71C:
             DB      _ENTER
-            DW      _LITword
+            DW      _LIT
             DW      $DDA0
             DW      _at
             DW      _RETURN
@@ -21668,8 +21669,13 @@ SCANHST:
             DW      _LITbyte
             DB      $03
             DW      _plus
+<<<<<<< HEAD
             DW      WRITESCORE
             DW      _LITword
+=======
+            DW      $B709
+            DW      _LIT
+>>>>>>> 84df4ab (Replaced non-TERSE verbs in the code to TERSE equivalent. For example _LITword, became _LIT and _LITquad became _DLIT)
             DW      $FFFF
             DW      _plusLOOP
 scanhst0:   DW      _2DUP
@@ -21686,7 +21692,7 @@ scanhst0:   DW      _2DUP
             DW      _plus
             DW      _PWB
             DW      _1
-            DW      _LITword
+            DW      _LIT
             DW      $DD9E
             DW      _bang
             DW      _LEAVE
@@ -21700,7 +21706,7 @@ scanhstlp:  DW      _LOOP
 ;******************************************************************************************
 GETHSARRAY:
             DB      _ENTER
-            DW      _LITword
+            DW      _LIT
             DW      INITFB
             DW      _Bat
             DW      _less
@@ -21725,7 +21731,7 @@ W_B7AD:
             DW      W_B71C
             DW      _SWAP
             DW      _minussign
-            DW      _LITword
+            DW      _LIT
             DW      $DDA0
             DW      _bang
             DW      _EI
@@ -21751,11 +21757,11 @@ W_B7D1:
             DW      _0BRANCH
             DW      $B7FE
             DW      W_B71C
-            DW      _LITword
+            DW      _LIT
             DW      $7800
-            DW      _LITword
+            DW      _LIT
             DW      GORF_PLAYER1
-            DW      _LITword
+            DW      _LIT
             DW      $0428
             DW      _WRITEP
             DW      _DROP
@@ -21770,11 +21776,11 @@ W_B7D1:
             DW      _0BRANCH
             DW      $B81D
             DW      W_B71C
-            DW      _LITword
+            DW      _LIT
             DW      $7800
-            DW      _LITword
+            DW      _LIT
             DW      GORF_PLAYER2
-            DW      _LITword
+            DW      _LIT
             DW      $0428
             DW      _WRITEP
             DW      _RETURN
@@ -21798,7 +21804,7 @@ W_B81F:
 W_B834:
             DB      _ENTER
             DW      W_B71C
-            DW      _LITword
+            DW      _LIT
             DW      $0428
             DW      _ROT
             DW      _INXMSG
@@ -21816,9 +21822,9 @@ W_B845:
             DW      _0
             DW      _DO
             DW      W_B71C
-            DW      _LITword
+            DW      _LIT
             DW      $4B00
-            DW      _LITword
+            DW      _LIT
             DW      $0428
             DW      _LITbyte
             DB      $04
@@ -21865,17 +21871,17 @@ W_B87A:
 ;******************************************************************************************
 W_B89E:
             DB      _ENTER
-            DW      _LITword
+            DW      _LIT
             DW      P1HSP
             DW      _P0
-            DW      _LITword
+            DW      _LIT
             DW      P2HSP
             DW      _P0
-            DW      _LITword
+            DW      _LIT
             DW      $DD9E
             DW      _ZERO
             DW      _1
-            DW      _LITword
+            DW      _LIT
             DW      $D097
             DW      _Bbang
             DW      _RETURN
@@ -21883,33 +21889,33 @@ W_B89E:
 ;******************************************************************************************
 W_B8BB:
             DB      _ENTER
-            DW      _LITword
+            DW      _LIT
             DW      COINS
             DW      _P0
-            DW      _LITword
+            DW      _LIT
             DW      DEMOMODE
             DW      _P1
-            DW      _LITword
+            DW      _LIT
             DW      PLAYERUP
             DW      _P0
-            DW      _LITword
+            DW      _LIT
             DW      $DD9E
             DW      _at
             DW      _0BRANCH
             DW      $B8FA
             DW      $B32C
-            DW      _LITword
+            DW      _LIT
             DW      AMBUSY
             DW      _BONE
             DW      $B341
-            DW      _LITword
+            DW      _LIT
             DW      $4000
-            DW      _LITword
+            DW      _LIT
             DW      $DDA0
             DW      _bang
             DW      W_B87A
             DW      W_B69D
-            DW      _LITword
+            DW      _LIT
             DW      $01C2
             DW      $B5D1
             DW      _0
@@ -21923,7 +21929,7 @@ LB900:
             DB      _ENTER
             DW      $B536
             DW      $B561
-            DW      _LITword
+            DW      _LIT
             DW      $D951
             DW      _at
             DW      _0BRANCH
@@ -21940,7 +21946,7 @@ LB900:
 ;******************************************************************************************
 W_B91F:
             DB      _ENTER
-            DW      _LITword
+            DW      _LIT
             DW      COINSIN
             DW      _Bat
             DW      _0BRANCH
@@ -21949,19 +21955,19 @@ W_B91F:
             DW      $B63B
             DW      $B64C
             DW      _DUP
-            DW      _LITword
+            DW      _LIT
             DW      COINSIN
             DW      _PSUB
-            DW      _LITword
+            DW      _LIT
             DW      INITFB
             DW      _PWB
-            DW      _LITword
+            DW      _LIT
             DW      P1FBCTR
             DW      _PWB
-            DW      _LITword
+            DW      _LIT
             DW      P2FBCTR
             DW      _P0
-            DW      _LITword
+            DW      _LIT
             DW      LB900
             DW      $B55D
             DW      _RETURN
@@ -21971,7 +21977,7 @@ W_B952:
             DB      _ENTER
             DW      $B536
             DW      $B561
-            DW      _LITword
+            DW      _LIT
             DW      $D951
             DW      _at
             DW      _0BRANCH
@@ -21989,7 +21995,7 @@ W_B952:
             DW      _LITbyte
             DB      $03
             DW      GETHSARRAY
-            DW      _LITword
+            DW      _LIT
             DW      INITFB
             DW      _Bat
             DW      _LITbyte
@@ -21997,10 +22003,10 @@ W_B952:
             DW      _not_equal
             DW      _0BRANCH
             DW      $B9AF
-            DW      _LITword
+            DW      _LIT
             DW      P1HSP
             DW      _Bat
-            DW      _LITword
+            DW      _LIT
             DW      P2HSP
             DW      _Bat
             DW      _DUP
@@ -22011,7 +22017,7 @@ W_B952:
             DW      $B9A9
             DW      _LITbyte
             DB      $03
-            DW      _LITword
+            DW      _LIT
             DW      P1HSP
             DW      _PADD
             DW      _BRANCH
@@ -22026,16 +22032,16 @@ W_B9B3:
             DW      _LITbyte
             DB      $07
             DW      W_B5EA
-            DW      _LITword
+            DW      _LIT
             DW      RIP
             DW      _Bat
             DW      _0BRANCH
             DW      $B9C9
-            DW      _LITword
+            DW      _LIT
             DW      W_B952
             DW      $B55D
             DW      W_B536
-            DW      _LITword
+            DW      _LIT
             DW      $D951
             DW      _at
             DW      _0BRANCH
@@ -22043,20 +22049,20 @@ W_B9B3:
             DW      _LITbyte
             DB      $05
             DW      W_B5EA
-            DW      _LITword
+            DW      _LIT
             DW      RIP
             DW      _P1
-            DW      _LITword
+            DW      _LIT
             DW      $D951
             DW      _ZERO
-            DW      _LITword
+            DW      _LIT
             DW      PLAYERUP
             DW      _Bat
             DW      _1plus
             DW      _1
             DW      _AND
             DW      _DUP
-            DW      _LITword
+            DW      _LIT
             DW      PLAYERUP
             DW      _PWB
             DW      _zeroequal
@@ -22381,7 +22387,7 @@ W_B9B3:
             ld      l,l
             nop
             or      d
-            ld      bc,_LITword
+            ld      bc,_LIT
             jp      z,$E9DD
             nop
             ld      h,$20
@@ -22476,7 +22482,7 @@ W_B9B3:
             call    z,$E9DD
             nop
             dec     bc
-            ld      bc,_LITword
+            ld      bc,_LIT
             ld      e,h
             cp      e
             halt
@@ -22790,7 +22796,7 @@ LBDA5:      DW      _RETURN             ; RETURN - gets RSP value and goes to it
             DB      $00
             DB      $04
 
-            ld      (_LITword),hl
+            ld      (_LIT),hl
             jr      z,$BDBC
             call    $A904
             ld      b,$98
@@ -22811,7 +22817,7 @@ LBDA5:      DW      _RETURN             ; RETURN - gets RSP value and goes to it
             nop
             ld      (bc),a
             dec     bc
-            ld      bc,_LITword
+            ld      bc,_LIT
             ld      e,(hl)
             ld      ($0076),hl
             jr      nz,$BD81
@@ -23161,10 +23167,10 @@ LBDA5:      DW      _RETURN             ; RETURN - gets RSP value and goes to it
 ;                   either start a game or loop the Attract Mode.
 ;******************************************************************************************
 LBF2D:              DB      _ENTER              ; Enter TERSE execution
-                    DW      _LITword            ;
+                    DW      _LIT            ;
                     DW      DEMOMODE            ; / Push address of DEMOMODE ($D001)
                     DW      _P1                 ; WPBONE (Write Protect 1 - Sets Game Over flag)
-                    DW      _LITword            ;
+                    DW      _LIT            ;
                     DW      CRASHCTR            ; / Push address of CRASHCTR ($D03C) [ROM PATCH]
                     DW      _P0                 ; WPBZERO (Write Protect 0) [ROM PATCH]
                     DW      _LITbyte            ;
@@ -23181,22 +23187,22 @@ LBF2D:              DB      _ENTER              ; Enter TERSE execution
 
 gos_push0:          DW      _0                  ; Push 0 (False)
 
-gos_setmus:         DW      _LITword            ;
+gos_setmus:         DW      _LIT            ;
                     DW      $D0AF               ; / Push address of MUSICFLAG ($D0AF)
                     DW      _Bbang              ; B! (Store the 1 or 0 flag)
-                    DW      _LITword            ;
+                    DW      _LIT            ;
                     DW      PLAYERUP            ; / Push address of PLAYERUP ($D038)
                     DW      _P0                 ; WPBZERO (Write Protect 0 - Reset to Player 1)
-                    DW      _LITword            ;
+                    DW      _LIT            ;
                     DW      SKILLFACTOR         ; / Push address of SKILLFACTOR ($D037)
                     DW      _P0                 ; WPBZERO (Write Protect 0 - Reset Rank)
                     DW      W_B69D              ; [ROM PATCH] Unknown vector call (Likely GSAB DOIT)
                     DW      $BD4E               ; GOSHOW (Title screen display routine at $BD4E)
                     DW      SHUTUP              ; SHUTUP (Silence audio hardware)
-                    DW      _LITword            ;
+                    DW      _LIT            ;
                     DW      COINFRAC            ; / Push address of COINFRAC ($D002) [ROM PATCH]
                     DW      _Bat                ; B@ (Fetch COINFRAC byte)
-                    DW      _LITword            ;
+                    DW      _LIT            ;
                     DW      COINS               ; / Push address of COINS ($D009)
                     DW      _Bat                ; B@ (Fetch COINS byte)
 
@@ -23214,7 +23220,7 @@ gos_setmus:         DW      _LITword            ;
 ;                   MISSION variable to each number to briefly show every game screen.
 ;******************************************************************************************
                     DW      _OR                 ; OR (Combine $D002 and COINS flags)
-                    DW      _LITword            ;
+                    DW      _LIT            ;
                     DW      COINSIN             ; / Push address of COINSIN ($D003)
                     DW      _Bat                ; B@ (Fetch COINSIN byte)
                     DW      _OR                 ; OR (Combine with previous flags)
@@ -23230,7 +23236,7 @@ gos_attract:        DW      $BC68               ; [Call unknown routine $BC68]
                     DW      _DO                 ; DO (Start 6 1 DO loop. Saves IP to IX stack)
 
 gos_loop:           DW      _I                  ; I (Fetch current loop index 1-5)
-                    DW      _LITword            ;
+                    DW      _LIT            ;
                     DW      MISSION             ; / Push address of MISSION ($D035)
                     DW      $1660               ; WPB! (Write Protect Byte Store - Sets MISSION to I)
                     DW      SHUTUP              ; SHUTUP (Silence audio for mission transition)
@@ -23266,25 +23272,25 @@ _RESTART:
             DB      _ENTER
             DW      _CHECKBUTT          ; [ROM PATCH] (Calls the newly renamed button check)
             DW      _WPCLEAR            ; WPCLEAR (Clear write-protected RAM)
-            DW      _LITword            ;
+            DW      _LIT            ;
             DW      P1FBCTR             ; / Push address of P1FBCTR
             DW      _Bat                ; B@ (Fetch Player 1 fire base count)
-            DW      _LITword            ;
+            DW      _LIT            ;
             DW      P2FBCTR             ; / Push address of P2FBCTR
             DW      _Bat                ; B@ (Fetch Player 2 fire base count)
             DW      _OR                 ; OR (Combine P1 and P2 counts)
             DW      _0BRANCH            ; IF (Are there any active bases?)
             DW      go_gos              ; / Branch to go_gos if false (no bases)
-            DW      _LITword            ;
+            DW      _LIT            ;
             DW      DEMOMODE            ; / Push address of DEMOMODE flag
             DW      _Bat                ; B@ (Fetch DEMOMODE byte)
             DW      _zeroequal          ; 0= (Is DEMOMODE equal to 0?)
             DW      _0BRANCH            ; IF (If not in DEMOMODE...)
             DW      go_gos              ; / Branch to go_gos if false (in DEMOMODE)
-            DW      _LITword            ;
+            DW      _LIT            ;
             DW      CRASHCTR            ; / Push address of CRASHCTR [ROM PATCH]
             DW      _PINC               ; 1+WPB! (Increment crash counter) [ROM PATCH]
-            DW      _LITword            ;
+            DW      _LIT            ;
             DW      NPLAYERS            ; / Push address of NPLAYERS
             DW      _Bat                ; B@ (Fetch number of players)
             DW      _0BRANCH            ; IF (Is it a 2-player game?)

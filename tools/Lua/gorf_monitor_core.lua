@@ -283,7 +283,7 @@ function C.on_dispatch()
             local top = state.call_stack[#state.call_stack]
             if not top or top.address ~= entry_at_ip then
                 if entry_at_ip == 0xBFB0 then state.call_stack = {} end
-                local name = C.g.data.entries[entry_at_ip]
+                local name = C.g.data.entries[entry_at_ip] or C.g.data.symbols[entry_at_ip]
                 if not name then
                     name = "UNKNOWN TERSE $" .. C.hex(entry_at_ip)
                 end

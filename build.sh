@@ -91,21 +91,37 @@ prepare_output_directories() {
 }
 
 assemble_source() {
-  log "[2/4] Assembling $SOURCE_NAME"
-  log "      zmac: $ZMAC_BIN"
+    log "[2/4] Assembling $SOURCE_NAME"
+    log "  zmac: $ZMAC_BIN"
 
-  (
-    cd -- "$SOURCE_DIR"
-    "$ZMAC_BIN" --oo cim,lst "$SOURCE_NAME"
-  ) || fail "zmac failed. Review the assembler output above."
+    # Detect if we are using an old v1.x version or the newer v2022 fork
+    if "$ZMAC_BIN" --version 2>&1 | grep -q '1\.3'; then
+        log "  Detected zmac v1.3 compatibility mode"
+        
+        # v1.3 resolves includes relative to where it executes.
+        # We run it from $REPO_ROOT so it sees "src/wow_equates.include"
+        ( cd -- "$REPO_ROOT"
+          "$ZMAC_BIN" \
+            -o "$CIM_FILE" \
+            -x "$LST_FILE" \
+            "$SOURCE_FILE"
+        ) || fail "zmac v1.3 failed. Review the assembler output above."
+    else
+        log "  Detected modern zmac mode"
+        ( cd -- "$REPO_ROOT"
+          "$ZMAC_BIN" \
+            -I "$REPO_ROOT" \
+            -I "$SOURCE_DIR" \
+            --od "$BUILD_DIR" \
+            --oo cim,lst \
+            "$SOURCE_FILE"
+        ) || fail "zmac failed. Review the assembler output above."
+    fi
 
-  [[ -s "$CIM_FILE" ]] ||
-    fail "zmac did not create $CIM_FILE"
-  [[ -s "$LST_FILE" ]] ||
-    fail "zmac did not create $LST_FILE"
-
-  log "      image:   $CIM_FILE ($(stat -c '%s bytes' "$CIM_FILE"))"
-  log "      listing: $LST_FILE"
+    [[ -s "$CIM_FILE" ]] || fail "zmac did not create $CIM_FILE"
+    [[ -s "$LST_FILE" ]] || fail "zmac did not create $LST_FILE"
+    log "  image: $CIM_FILE ($(stat -c '%s bytes' "$CIM_FILE"))"
+    log "  listing: $LST_FILE"
 }
 
 slice_roms() {

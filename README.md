@@ -8,7 +8,7 @@ This repository contains the disassembly, source code reconstruction, and techni
 
 * **Assembler:** zmac v1.3 (Z80 Macro Cross Assembler)
   * [Windows Binary (`zmac.exe`)](https://ballyalley.com/ml/ml_tools/Zmac13_win32.zip)
-  * [Linux Source (`Zmac13.tar.gz`)](https://ballyalley.com/ml/ml_tools/Zmac13.tar.gz)
+  * [Linux Source and Binary (`zmac`)](https://ballyalley.com/ml/ml_tools/zmac-linux.zip)
 * **Primary Source:** `src/Gorf_Disassembly.asm`
 
 ---

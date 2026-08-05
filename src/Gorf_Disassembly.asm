@@ -21602,7 +21602,7 @@ CHECKSCORE:
             push    hl
             exx
             DW      _DSPATCH
-              	
+
 ;******************************************************************************************
 WRITESCORE:
             exx
@@ -21655,7 +21655,7 @@ SCANHST:
             DW      _0BRANCH            ; but branches if 0 on stack
             DW      scanhst0            ; I=4 so replace final score
 
-            DW      _I			
+            DW      _I
             DW      _LITbyte
             DB      $03
             DW      _DO                 ; start new loop from I to 3
@@ -21669,13 +21669,8 @@ SCANHST:
             DW      _LITbyte
             DB      $03
             DW      _plus
-<<<<<<< HEAD
-            DW      WRITESCORE
-            DW      _LITword
-=======
             DW      $B709
             DW      _LIT
->>>>>>> 84df4ab (Replaced non-TERSE verbs in the code to TERSE equivalent. For example _LITword, became _LIT and _LITquad became _DLIT)
             DW      $FFFF
             DW      _plusLOOP
 scanhst0:   DW      _2DUP

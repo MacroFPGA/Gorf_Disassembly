@@ -3,13 +3,14 @@
 ; This source targets program 2 only; it does not build a program-1 variant.
 ;
 ; ROM map:  $C000-$CFFF (X11 socket, 4 KiB)
-; CRC-32:   E3A07D3B
-; SHA-1:    1C131EF85D898BDF70413AB6C7B386C6EA996BB1
+; CRC-32:   D9BB9F11
+; SHA-1:    D19DDA593369988BE931A54149DF88C0411DD05D
 ;
 ; Interface used by Gorf program 2:
 ;
 ;   $C000  JP TranslateSpeechPrimitive
 ;   $C003  Length-prefixed German message table
+;   $CC00  JP PROGRAM2_FOREIGN_RESUME
 ;
 ; The resident program jumps to $C000 with DE holding the address of an
 ; English speech primitive.  The routine searches a table of 36 program-2
@@ -24,7 +25,14 @@
         ORG     $C000
 
 PGM2_SPEECH_QUEUE       EQU     $10B8
+PROGRAM2_FOREIGN_RESUME EQU     $1769
 TRANSLATION_COUNT       EQU     36
+SC01_SETTINGS_PORT      EQU     $10
+SC01_ENABLED_MASK       EQU     $80
+SPEECH_QUEUE_FIRST      EQU     $D112
+SPEECH_QUEUE_AFTER_LAST EQU     $D122
+SPEECH_QUEUE_WRITE_PTR  EQU     $D125
+SPEECH_QUEUE_READ_PTR   EQU     $D127
 
 ; Program-2 speech primitive addresses.  The first 26 are in the resident
 ; speech block.  The next three are upper-ROM records not yet named in the
@@ -80,16 +88,17 @@ X11Entry:
 ;
 ;       DB payload_length, payload...
 ;
-; The table contains all 52 program-2 indexes.  Indexes 0 through 48 retain the
-; authentic German payloads where the display composition remains compatible.
-; Index 49 is program-2 credit text, and indexes 50 and 51 are the program-2
-; copyright lines.
+; The table contains all 52 program-2 indexes in the exact order expected by
+; the resident program.  Authentic German program-1 wording is retained where
+; the program-2 display composition is compatible.  Reordered or new program-2
+; records are translated separately.  The blank and binary records at indexes
+; 42 through 47 must remain byte-for-byte compatible with program 2.
 ; -----------------------------------------------------------------------------
 
 GermanMessageTable:
 Message_00_Mission:
         DB      Message_00_Mission_End - $ - 1
-        DB      "MISSION"
+        DB      "MISSION["
 Message_00_Mission_End:
 
 Message_01_SpielBeendet:
@@ -132,100 +141,100 @@ Message_08_Plaetze:
         DB      "PLAETZE"
 Message_08_Plaetze_End:
 
-Message_09_ZusaetzlicheMuenzen:
-        DB      Message_09_ZusaetzlicheMuenzen_End - $ - 1
-        DB      "ZUSAETZLICHE MUENZEN"
-Message_09_ZusaetzlicheMuenzen_End:
-
-Message_10_ZusaetzlicheMuenzenEin:
-        DB      Message_10_ZusaetzlicheMuenzenEin_End - $ - 1
+Message_09_ZusaetzlicheMuenzenEin:
+        DB      Message_09_ZusaetzlicheMuenzenEin_End - $ - 1
         DB      "ZUSAETZLICHE MUENZEN EIN"
-Message_10_ZusaetzlicheMuenzenEin_End:
+Message_09_ZusaetzlicheMuenzenEin_End:
 
-Message_11_WaehlenSieEinenSpieler:
-        DB      Message_11_WaehlenSieEinenSpieler_End - $ - 1
+Message_10_WaehlenSieEinenSpieler:
+        DB      Message_10_WaehlenSieEinenSpieler_End - $ - 1
         DB      "WAEHLEN SIE EINEN SPIELER"
-Message_11_WaehlenSieEinenSpieler_End:
+Message_10_WaehlenSieEinenSpieler_End:
 
-Message_12_OderWerfenSie:
-        DB      Message_12_OderWerfenSie_End - $ - 1
-        DB      "ODER WERFEN SIE"
-Message_12_OderWerfenSie_End:
+Message_11_Oder:
+        DB      Message_11_Oder_End - $ - 1
+        DB      "ODER"
+Message_11_Oder_End:
 
-Message_13_FuerZweiSpielerOder:
-        DB      Message_13_FuerZweiSpielerOder_End - $ - 1
-        DB      "FUER ZWEI SPIELER ODER"
-Message_13_FuerZweiSpielerOder_End:
+Message_12_EinOderZweiSpieler:
+        DB      Message_12_EinOderZweiSpieler_End - $ - 1
+        DB      "EIN ODER ZWEI SPIELER"
+Message_12_EinOderZweiSpieler_End:
 
-Message_14_FuerZusaetzlicheSchiffe:
-        DB      Message_14_FuerZusaetzlicheSchiffe_End - $ - 1
-        DB      "FUER ZUSAETZLICHE SCHIFFE"
-Message_14_FuerZusaetzlicheSchiffe_End:
+Message_13_FuerZweiSpieler:
+        DB      Message_13_FuerZweiSpieler_End - $ - 1
+        DB      "FUER ZWEI SPIELER"
+Message_13_FuerZweiSpieler_End:
 
-Message_15_WaehlenSie:
-        DB      Message_15_WaehlenSie_End - $ - 1
-        DB      "WAEHLEN SIE"
-Message_15_WaehlenSie_End:
+Message_14_OderFuerExtraSchiffe:
+        DB      Message_14_OderFuerExtraSchiffe_End - $ - 1
+        DB      "ODER FUER EXTRA SCHIFFE"
+Message_14_OderFuerExtraSchiffe_End:
 
-Message_16_DieGorfRoboter:
-        DB      Message_16_DieGorfRoboter_End - $ - 1
-        DB      "DIE GORF ROBOTER"
-Message_16_DieGorfRoboter_End:
+Message_15_MitExtraSchiffen:
+        DB      Message_15_MitExtraSchiffen_End - $ - 1
+        DB      "MIT EXTRA SCHIFFEN"
+Message_15_MitExtraSchiffen_End:
 
-Message_17_GreifenAn:
-        DB      Message_17_GreifenAn_End - $ - 1
-        DB      "GREIFEN AN"
-Message_17_GreifenAn_End:
+Message_16_DasBoese:
+        DB      Message_16_DasBoese_End - $ - 1
+        DB      "DAS BOESE"
+Message_16_DasBoese_End:
 
-Message_18_IhreAufgabeIst:
-        DB      Message_18_IhreAufgabeIst_End - $ - 1
+Message_17_GorfRoboterimperium:
+        DB      Message_17_GorfRoboterimperium_End - $ - 1
+        DB      "GORF-ROBOTERIMPERIUM"
+Message_17_GorfRoboterimperium_End:
+
+Message_18_HatAngegriffen:
+        DB      Message_18_HatAngegriffen_End - $ - 1
+        DB      "HAT ANGEGRIFFEN"
+Message_18_HatAngegriffen_End:
+
+Message_19_IhreAufgabeIst:
+        DB      Message_19_IhreAufgabeIst_End - $ - 1
         DB      "IHRE AUFGABE IST"
-Message_18_IhreAufgabeIst_End:
+Message_19_IhreAufgabeIst_End:
 
-Message_19_DieInvasionAbzuschlagen:
-        DB      Message_19_DieInvasionAbzuschlagen_End - $ - 1
-        DB      "DIE INVASION ABZUSCHLAGEN"
-Message_19_DieInvasionAbzuschlagen_End:
+Message_20_DieInvasionAbzuwehren:
+        DB      Message_20_DieInvasionAbzuwehren_End - $ - 1
+        DB      "DIE INVASION ABZUWEHREN"
+Message_20_DieInvasionAbzuwehren_End:
 
-Message_20_UndEinenGegenangriff:
-        DB      Message_20_UndEinenGegenangriff_End - $ - 1
-        DB      "UND EINEN GEGENANGRIFF"
-Message_20_UndEinenGegenangriff_End:
+Message_21_UndGegenanzugreifen:
+        DB      Message_21_UndGegenanzugreifen_End - $ - 1
+        DB      "UND GEGENANZUGREIFEN"
+Message_21_UndGegenanzugreifen_End:
 
-Message_21_Durchzufuehren:
-        DB      Message_21_Durchzufuehren_End - $ - 1
-        DB      "DURCHZUFUEHREN"
-Message_21_Durchzufuehren_End:
+Message_22_SieWerden:
+        DB      Message_22_SieWerden_End - $ - 1
+        DB      "SIE WERDEN"
+Message_22_SieWerden_End:
 
-Message_22_AufIhremWeg:
-        DB      Message_22_AufIhremWeg_End - $ - 1
-        DB      "AUF IHREM WEG"
-Message_22_AufIhremWeg_End:
+Message_23_VerschiedeneFeindliche:
+        DB      Message_23_VerschiedeneFeindliche_End - $ - 1
+        DB      "VERSCHIEDENE FEINDLICHE"
+Message_23_VerschiedeneFeindliche_End:
 
-Message_23_ZumDramatischenKampfMit:
-        DB      Message_23_ZumDramatischenKampfMit_End - $ - 1
-        DB      "ZUM DRAMATISCHEN KAMPF MIT"
-Message_23_ZumDramatischenKampfMit_End:
+Message_24_RaumschiffeBekaempfen:
+        DB      Message_24_RaumschiffeBekaempfen_End - $ - 1
+        DB      "RAUMSCHIFFE BEKAEMPFEN"
+Message_24_RaumschiffeBekaempfen_End:
 
-Message_24_DemFeindlichenFlagschiff:
-        DB      Message_24_DemFeindlichenFlagschiff_End - $ - 1
+Message_25_AufIhremWegZum:
+        DB      Message_25_AufIhremWegZum_End - $ - 1
+        DB      "AUF IHREM WEG ZUM"
+Message_25_AufIhremWegZum_End:
+
+Message_26_DramatischenKampfMit:
+        DB      Message_26_DramatischenKampfMit_End - $ - 1
+        DB      "DRAMATISCHEN KAMPF MIT"
+Message_26_DramatischenKampfMit_End:
+
+Message_27_DemFeindlichenFlagschiff:
+        DB      Message_27_DemFeindlichenFlagschiff_End - $ - 1
         DB      "DEM FEINDLICHEN FLAGSCHIFF"
-Message_24_DemFeindlichenFlagschiff_End:
-
-Message_25_MuessenSie:
-        DB      Message_25_MuessenSie_End - $ - 1
-        DB      "MUESSEN SIE"
-Message_25_MuessenSie_End:
-
-Message_26_FeindlicheRaumschiffe:
-        DB      Message_26_FeindlicheRaumschiffe_End - $ - 1
-        DB      "FEINDLICHE RAUMSCHIFFE"
-Message_26_FeindlicheRaumschiffe_End:
-
-Message_27_Zerstoeren:
-        DB      Message_27_Zerstoeren_End - $ - 1
-        DB      "ZERSTOEREN"
-Message_27_Zerstoeren_End:
+Message_27_DemFeindlichenFlagschiff_End:
 
 Message_28_DieHoechstergebnisse:
         DB      Message_28_DieHoechstergebnisse_End - $ - 1
@@ -234,7 +243,7 @@ Message_28_DieHoechstergebnisse_End:
 
 Message_29_Sind:
         DB      Message_29_Sind_End - $ - 1
-        DB      "SIND"
+        DB      "SIND["
 Message_29_Sind_End:
 
 Message_30_ZweiSchiffe:
@@ -267,10 +276,10 @@ Message_35_Galaxians:
         DB      "GALAXIANS"
 Message_35_Galaxians_End:
 
-Message_36_AttackFighters:
-        DB      Message_36_AttackFighters_End - $ - 1
-        DB      "ATTACK FIGHTERS"
-Message_36_AttackFighters_End:
+Message_36_LaserAttack:
+        DB      Message_36_LaserAttack_End - $ - 1
+        DB      "LASER ATTACK"
+Message_36_LaserAttack_End:
 
 Message_37_SpaceWarp:
         DB      Message_37_SpaceWarp_End - $ - 1
@@ -297,40 +306,40 @@ Message_41_GeldEinwerfen:
         DB      "GELD EINWERFEN"
 Message_41_GeldEinwerfen_End:
 
-Message_42_EinOderZweiSpieler:
-        DB      Message_42_EinOderZweiSpieler_End - $ - 1
-        DB      "EIN ODER ZWEI SPIELER"
-Message_42_EinOderZweiSpieler_End:
+Message_42_Blank:
+        DB      Message_42_Blank_End - $ - 1
+        DB      " "
+Message_42_Blank_End:
 
-Message_43_FuerZweiSpieler:
-        DB      Message_43_FuerZweiSpieler_End - $ - 1
-        DB      "FUER ZWEI SPIELER"
-Message_43_FuerZweiSpieler_End:
+Message_43_Blank:
+        DB      Message_43_Blank_End - $ - 1
+        DB      " "
+Message_43_Blank_End:
 
 Message_44_Control:
         DB      Message_44_Control_End - $ - 1
-        DB      $09,"1"
+        DB      $09
 Message_44_Control_End:
 
 Message_45_Control:
         DB      Message_45_Control_End - $ - 1
-        DB      $0B,$0C,$0A,$0D,$0E
+        DB      $0A,$0B,$09,$0D,$0E
 Message_45_Control_End:
 
 Message_46_Control:
         DB      Message_46_Control_End - $ - 1
-        DB      $0F,$2A,$0C,$0A,$0E,$2B
+        DB      $0C,$0B,$09,$0D,$0F
 Message_46_Control_End:
 
 Message_47_Control:
         DB      Message_47_Control_End - $ - 1
-        DB      $0F,$2A
+        DB      $0C
 Message_47_Control_End:
 
-Message_48_SameSpieler:
-        DB      Message_48_SameSpieler_End - $ - 1
-        DB      "SAME SPIELER"
-Message_48_SameSpieler_End:
+Message_48_GleicherSpieler:
+        DB      Message_48_GleicherSpieler_End - $ - 1
+        DB      "GLEICHER SPIELER"
+Message_48_GleicherSpieler_End:
 
 Message_49_KreditSchiffe:
         DB      Message_49_KreditSchiffe_End - $ - 1
@@ -734,9 +743,39 @@ ResolveTranslationIndex:
         LD      A,D
         OR      E
         JP      Z,TranslationSuppressed
+        CALL    WaitForSpeechQueueSlot
         JP      PGM2_SPEECH_QUEUE
 
 TranslationSuppressed:
+        RET
+
+; Program 2's resident queue routine writes the next primitive without testing
+; whether its eight-entry ring buffer is full.  German primitives keep the
+; consumer occupied substantially longer than the English originals, allowing
+; a burst of queued speech to lap the consumer.  Reserve one slot so equal
+; read/write pointers continue to mean "empty," as the interrupt handler
+; expects.  Interrupts remain enabled while waiting and advance the reader.
+WaitForSpeechQueueSlot:
+        IN      A,(SC01_SETTINGS_PORT)
+        AND     SC01_ENABLED_MASK
+        RET     Z                       ; Resident routine will also ignore it
+
+SpeechQueueWait:
+        PUSH    DE                      ; Preserve translated primitive address
+        LD      HL,(SPEECH_QUEUE_WRITE_PTR)
+        INC     HL
+        INC     HL
+        LD      A,L
+        CP      SPEECH_QUEUE_AFTER_LAST & $FF
+        JR      C,SpeechQueueNextReady
+        LD      HL,SPEECH_QUEUE_FIRST
+
+SpeechQueueNextReady:
+        LD      DE,(SPEECH_QUEUE_READ_PTR)
+        OR      A                       ; Clear carry before pointer comparison
+        SBC     HL,DE
+        POP     DE
+        JR      Z,SpeechQueueWait
         RET
 
 ; zmac v1.3 does not support REPT.  These nested macros emit power-of-two runs
@@ -801,6 +840,48 @@ FillFF2048 MACRO
         FillFF1024
         FillFF1024
         ENDM
+
+; Pad to program 2's third foreign-ROM entry point.  The resident input routine
+; branches here when the Language DIP selects the X11 ROM.
+        IF      $CC00 - $ >= 2048
+        FillFF2048
+        ENDIF
+        IF      $CC00 - $ >= 1024
+        FillFF1024
+        ENDIF
+        IF      $CC00 - $ >= 512
+        FillFF512
+        ENDIF
+        IF      $CC00 - $ >= 256
+        FillFF256
+        ENDIF
+        IF      $CC00 - $ >= 128
+        FillFF128
+        ENDIF
+        IF      $CC00 - $ >= 64
+        FillFF64
+        ENDIF
+        IF      $CC00 - $ >= 32
+        FillFF32
+        ENDIF
+        IF      $CC00 - $ >= 16
+        FillFF16
+        ENDIF
+        IF      $CC00 - $ >= 8
+        FillFF8
+        ENDIF
+        IF      $CC00 - $ >= 4
+        FillFF4
+        ENDIF
+        IF      $CC00 - $ >= 2
+        FillFF2
+        ENDIF
+        IF      $CC00 - $ >= 1
+        FillFF1
+        ENDIF
+
+ForeignCoinInputEntry:
+        JP      PROGRAM2_FOREIGN_RESUME
 
 ; The physical X11 device is a 4 KiB ROM.  Unused bytes read as $FF.  Its final
 ; 14 bytes contain the original DNA identification trailer.

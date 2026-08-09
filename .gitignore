@@ -13,6 +13,7 @@ src/zout/
 *.exe
 *.zip
 *.cfg
+873*.x*
 
 console_history
 

@@ -30,4 +30,5 @@ Thumbs.db
 !build.bat
 !tools/
 !tools/.gitkeep
+!roms/sc01.bin
 !roms/sc01a.bin

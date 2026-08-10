@@ -5,7 +5,7 @@ This directory contains the German X11 language ROM adapted for Gorf Program 2. 
 
 This is a Program-2 build. A Program-1 X11 image cannot be used unchanged because the resident speech addresses, speech queue entry point, message indexes, and foreign coin/input path differ.
 
-The complete display-string and speech mapping is documented in [`SPEECH_MAP.md`](SPEECH_MAP.md).
+The complete display-string and speech mapping is documented in [`SPEECH_MAP.md`](../../docs/SPEECH_MAP.md).
 
 ## X11 interface
 
@@ -31,7 +31,7 @@ The German table contains all 52 records expected by Program 2. The ordering is 
 
 Printable German text uses the character repertoire available to the game. Umlauts are therefore written as `AE`, `OE`, and `UE`. The literal `$5B` and `$5C` character codes used by the resident display data are retained where required.
 
-See [`SPEECH_MAP.md`](SPEECH_MAP.md#display-message-map) for every English and German record, including its index, address, and payload length.
+See [`SPEECH_MAP.md`](../../docs/SPEECH_MAP.md#display-message-map) for every English and German record, including its index, address, and payload length.
 
 ## Speech translation
 

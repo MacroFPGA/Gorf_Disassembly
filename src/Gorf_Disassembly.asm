@@ -3940,7 +3940,7 @@ musicin:    ret
 
 ;*******************************************************************
 
-            ld      a,($D0AF)
+            ld      a,(MUSICFLAG)
             or      a
             jp      z,$0F7D
             push    iy
@@ -3953,7 +3953,7 @@ musicin:    ret
 
 ;*******************************************************************
 
-            ld      a,($D0AF)
+            ld      a,(MUSICFLAG)
             or      a
             jp      z,$0F97
             push    iy
@@ -4725,7 +4725,7 @@ AM_TALK:    ld      a,(AMBUSY)          ; Still playing FX / Talk from before
             and     $0F                 ; Mask out directions
             ret     z                   ; Return if nothing active.
             ld      a,$01
-            ld      ($D0AF),a
+            ld      (MUSICFLAG),a
             ld      a,($D124)
             and     a
             jp      nz,amtalk0
@@ -21551,7 +21551,7 @@ W_B6AF:
             DW      _P0
             DW      _1
             DW      _LIT
-            DW      $D0AF
+            DW      MUSICFLAG
             DW      _Bbang
             DW      _LIT
             DW      MISSION
@@ -21589,17 +21589,17 @@ CHECKSCORE:
             inc     hl
             inc     de
             inc     de
-            ld      a,(de)
+CS0:        ld      a,(de)
             cp      (hl)
-            jr      c,$B702
-            jr      nz,$B6FD
+            jr      c,CS2
+            jr      nz,CS1
             dec     hl
             dec     de
-            djnz    $B6F3
-            ld      hl,$0000
-            jr      $B705
-            ld      hl,$0001
-            push    hl
+            djnz    CS0
+CS1:        ld      hl,$0000
+            jr      CS3
+CS2:        ld      hl,$0001
+CS3:        push    hl
             exx
             DW      _DSPATCH
 
@@ -21609,14 +21609,14 @@ WRITESCORE:
             pop     hl
             pop     de
             ld      b,$03
-            ld      a,(de)
+WS0:        ld      a,(de)
             push    de
             ld      e,a
             call    wpb_bang            ; Write byte to protected memory
             pop     de
             inc     hl
             inc     de
-            djnz    $B70E
+            djnz    WS0
             exx
             DW      _DSPATCH
 
@@ -21658,43 +21658,44 @@ SCANHST:
             DW      _I
             DW      _LITbyte
             DB      $03
-            DW      _DO                 ; start new loop from I to 3
-            DW      _DUP
-            DW      _I
+            DW      _DO                 ; start new loop from 3 downto I
+            DW      _DUP                ; duplicate address of table
+            DW      _I                  
             DW      _LITbyte
             DB      $03
-            DW      _star
-            DW      _plus
-            DW      _DUP
+            DW      _star               ; I * 3
+            DW      _plus               ; plus base of table
+            DW      _DUP                ; duplicate
             DW      _LITbyte
-            DB      $03
-            DW      _plus
-            DW      $B709
+            DB      $03                 
+            DW      _plus               ; add 3 so we have address of score I and score I+1
+            DW      WRITESCORE          ; copy score I to score I+1
             DW      _LIT
-            DW      $FFFF
-            DW      _plusLOOP
+            DW      $FFFF               ; -1
+            DW      _plusLOOP           ; loop until we reach I (from first loop)
+
 scanhst0:   DW      _2DUP
             DW      _I
             DW      _LITbyte
             DB      $03
             DW      _star
-            DW      _plus
+            DW      _plus               ; get address of score we replace
             DW      _2DUP
-            DW      WRITESCORE
+            DW      WRITESCORE          ; write it out
             DW      _SWAP
             DW      _LITbyte
             DB      $03
             DW      _plus
-            DW      _PWB
+            DW      _PWB                ; write E to HL
             DW      _1
             DW      _LIT
             DW      $DD9E
-            DW      _bang
-            DW      _LEAVE
+            DW      _bang               ; write 1 to DD9E
+            DW      _LEAVE              ; exit loops
 scanhstlp:  DW      _LOOP
+            DW      _DROP               ; remove duplicates from stack
             DW      _DROP
-            DW      _DROP
-            DW      _RETURN
+            DW      _RETURN             ; return
 
 ;******************************************************************************************
 ; Get the base address of the relevant high score table
@@ -22691,51 +22692,39 @@ W_B9B3:
             exx
             DW      _DSPATCH
 ;******************************************************************************************
-            rst     $08
-            halt
-            nop
-            djnz    $BD4B
-            ld      (bc),a
-            halt
-            nop
-            jr      nz,$BD6D
-            ld      (bc),a
-            call    po,$EA01
-            inc     bc
-            ld      h,c
-            cp      l
-            ld      a,(bc)
-            cp      d
-            halt
-            nop
-            djnz    $BD5D
-            ld      (bc),a
-            halt
-            nop
-            djnz    $BD7F
-            ld      (bc),a
-            call    po,$EA01
-            inc     bc
-            ld      (hl),e
-            cp      l
-            rra
-            cp      c
-            ld      h,c
-            nop
-            rst     $08
-            sbc     a,b
-            nop
-            ld      b,h
-            ld      (bc),a
-            ld      c,(hl)
-            cp      l
-            jr      $BDAD
-            sbc     a,b
-            rrca
-            ld      e,a
-            ld      (bc),a
-            ld      h,c
-            nop
+GOSHOW:
+            DB      _ENTER
+            DW      _LITbyte
+            DB      $10
+            DW      _INP
+            DW      _LITbyte
+            DB      $20
+            DW      _AND
+            DW      _zeroequal
+            DW      _0BRANCH
+            DW      $BD61
+            DW      $BA0A
+            DW      _LITbyte
+            DB      $10
+            DW      _INP
+            DW      _LITbyte
+            DB      $10
+            DW      _AND
+            DW      _zeroequal
+            DW      _0BRANCH
+            DW      $BD73
+            DW      W_B91F
+            DW      _RETURN
+;******************************************************************************************
+W_BD75:
+            DB      _ENTER
+            DW      _0
+            DW      _DO
+            DW      GOSHOW
+            DW      $2F18
+            DW      $0F98
+            DW      _LOOP
+            DW      _RETURN
 
 ;****************************************************************************************
 ; { GAME OVER - BLOCK 0115 }
@@ -22749,7 +22738,7 @@ _CHECKBUTT: DB      _ENTER
 ;****************************************************************************************
             DW      _LITbyte
             DB      $04
-            DW      $0215
+            DW      _AND
             DW      _0
             DW      $016C               ; get two words from PSP,
                             ;   if P2-P1 > 0, then push zero to PSP,
@@ -23183,7 +23172,7 @@ LBF2D:              DB      _ENTER              ; Enter TERSE execution
 gos_push0:          DW      _0                  ; Push 0 (False)
 
 gos_setmus:         DW      _LIT            ;
-                    DW      $D0AF               ; / Push address of MUSICFLAG ($D0AF)
+                    DW      MUSICFLAG           ; / Push address of MUSICFLAG ($D0AF)
                     DW      _Bbang              ; B! (Store the 1 or 0 flag)
                     DW      _LIT            ;
                     DW      PLAYERUP            ; / Push address of PLAYERUP ($D038)
@@ -23192,7 +23181,7 @@ gos_setmus:         DW      _LIT            ;
                     DW      SKILLFACTOR         ; / Push address of SKILLFACTOR ($D037)
                     DW      _P0                 ; WPBZERO (Write Protect 0 - Reset Rank)
                     DW      W_B69D              ; [ROM PATCH] Unknown vector call (Likely GSAB DOIT)
-                    DW      $BD4E               ; GOSHOW (Title screen display routine at $BD4E)
+                    DW      GOSHOW              ; GOSHOW (Title screen display routine at $BD4E)
                     DW      SHUTUP              ; SHUTUP (Silence audio hardware)
                     DW      _LIT            ;
                     DW      COINFRAC            ; / Push address of COINFRAC ($D002) [ROM PATCH]
@@ -23417,6 +23406,7 @@ RELABS          EQU     $D080                   ; relabs pointer
 FFRELABS        EQU     $D083                   ; ffrelabs pointer
 AMBUSY          EQU     $D08B                   ; Used for speech when joystick moved
 RND_SEED        EQU     $D0AB                   ; 32-bit Random Seed RND#0
+MUSICFLAG       EQU     $D0AF                   ;
 
 ;******************************************************************************************
 ; TERSE System Stack Pointers

@@ -2,7 +2,7 @@
 ; German language expansion ROM for Gorf program 2
 ; This source targets program 2 only; it does not build a program-1 variant.
 ;
-; ROM map:  $C000-$CFFF (X11 socket, 4 KiB)
+; ROM map:  $C000-$CFFF (X11 socket, 4 KB)
 ; CRC-32:   D9BB9F11
 ; SHA-1:    D19DDA593369988BE931A54149DF88C0411DD05D
 ;
@@ -883,7 +883,7 @@ FillFF2048 MACRO
 ForeignCoinInputEntry:
         JP      PROGRAM2_FOREIGN_RESUME
 
-; The physical X11 device is a 4 KiB ROM.  Unused bytes read as $FF.  Its final
+; The physical X11 device is a 4 KB ROM.  Unused bytes read as $FF.  Its final
 ; 14 bytes contain the original DNA identification trailer.
         IF      $CFF2 - $ >= 2048
         FillFF2048

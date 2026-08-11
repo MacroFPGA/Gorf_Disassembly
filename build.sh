@@ -6,6 +6,8 @@ readonly ROM_SIZE=$((0x1000))
 readonly SOURCE_NAME="Gorf_Disassembly.asm"
 readonly ENGLISH_ZIP_NAME="gorf.zip"
 readonly GERMAN_ZIP_NAME="gorfpgm1g.zip"
+readonly KLINGON_ZIP_NAME="gorfpgm1g.zip"
+readonly LEGACY_KLINGON_ZIP_NAME="gorfk.zip"
 readonly REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 readonly SOURCE_DIR="$REPO_ROOT/src"
 readonly BUILD_DIR="$SOURCE_DIR/zout"
@@ -20,13 +22,18 @@ readonly SC01_FILE="$ROMS_DIR/sc01.bin"
 readonly GERMAN_SOURCE="$SOURCE_DIR/german/GERMAN_X11.asm"
 readonly GERMAN_OUT_FILE="$ROMS_DIR/german.x11"
 
+# Klingon specific paths
+readonly KLINGON_SOURCE="$SOURCE_DIR/klingon/KLINGON_X11.asm"
+readonly KLINGON_OUT_FILE="$ROMS_DIR/klingon.x11"
+readonly KLINGON_ZIP_ALIAS="$BUILD_DIR/german.x11"
+
 # Standard English ROM array names
 readonly -a ENGLISH_ROM_NAMES=(
     "gorf-a.bin" "gorf-b.bin" "gorf-c.bin" "gorf-d.bin"
     "gorf-e.bin" "gorf-f.bin" "gorf-g.bin" "gorf-h.bin"
 )
 
-# German Alternate ROM array names
+# Program-2 foreign ROM array names
 readonly -a GERMAN_ROM_NAMES=(
     "873a.x1" "873b.x2" "873c.x3" "873d.x4"
     "873e.x5" "873f.x6" "873g.x7" "873h.x8"
@@ -39,6 +46,7 @@ readonly -a ROM_ADDRESSES=(
 
 # Global configuration variable controlled by arguments
 BUILD_GERMAN=false
+BUILD_KLINGON=false
 ZIP_NAME=""
 ZIP_FILE=""
 
@@ -91,7 +99,8 @@ prepare_output_directories() {
         rm -f -- "$ROMS_DIR/$name"
     done
     rm -f -- "$GERMAN_OUT_FILE"
-    rm -f -- "$ROMS_DIR/$ENGLISH_ZIP_NAME" "$ROMS_DIR/$GERMAN_ZIP_NAME"
+    rm -f -- "$KLINGON_OUT_FILE"
+    rm -f -- "$ROMS_DIR/$ENGLISH_ZIP_NAME" "$ROMS_DIR/$GERMAN_ZIP_NAME" "$ROMS_DIR/$LEGACY_KLINGON_ZIP_NAME"
 }
 
 assemble_source() {
@@ -145,6 +154,33 @@ assemble_german() {
     log "      german: $GERMAN_OUT_FILE ($(stat -c '%s bytes' "$GERMAN_OUT_FILE"))"
 }
 
+assemble_klingon() {
+    [[ -f "$KLINGON_SOURCE" ]] || fail "Klingon source file not found: $KLINGON_SOURCE"
+    log "[2.5/4] Assembling Optional Klingon ROM: KLINGON_X11.asm"
+    local klingon_tmp_cim="$BUILD_DIR/KLINGON_X11.cim"
+
+    if "$ZMAC_BIN" --version 2>&1 | grep -q '1\.3'; then
+        log "      Detected zmac v1.3 compatibility mode for Klingon ROM"
+        (
+            cd -- "$REPO_ROOT"
+            "$ZMAC_BIN" -o "$klingon_tmp_cim" -x "$BUILD_DIR/KLINGON_X11.lst" "$KLINGON_SOURCE"
+        ) || fail "zmac v1.3 failed on Klingon ROM."
+    else
+        log "      Detected modern zmac mode for Klingon ROM"
+        (
+            cd -- "$REPO_ROOT"
+            "$ZMAC_BIN" -I "$REPO_ROOT" -I "$SOURCE_DIR" -I "$SOURCE_DIR/klingon" --od "$BUILD_DIR" --oo cim,lst "$KLINGON_SOURCE"
+        ) || fail "zmac failed on Klingon ROM."
+    fi
+
+    [[ -s "$klingon_tmp_cim" ]] || fail "zmac did not create $klingon_tmp_cim"
+    local klingon_size
+    klingon_size="$(stat -c '%s' "$klingon_tmp_cim")"
+    (( klingon_size == ROM_SIZE )) || fail "Klingon ROM is $klingon_size bytes; expected $ROM_SIZE"
+    cp -- "$klingon_tmp_cim" "$KLINGON_OUT_FILE"
+    log "      klingon: $KLINGON_OUT_FILE ($(stat -c '%s bytes' "$KLINGON_OUT_FILE"))"
+}
+
 slice_roms() {
     local cim_size
     local index
@@ -157,7 +193,7 @@ slice_roms() {
     cim_size="$(stat -c '%s' "$CIM_FILE")"
     (( cim_size > ROM_ADDRESSES[${#ROM_ADDRESSES[@]} - 1] )) || fail "Assembled image is too short for the Gorf ROM map: $cim_size bytes"
 
-    log "[3/4] Splitting the CPU image into 4 KiB Gorf ROMs"
+    log "[3/4] Splitting the CPU image into 4 KB Gorf ROMs"
     log "      The video-memory gap at \$4000-\$7FFF is not packaged."
 
     for index in "${!ROM_NAMES[@]}"; do
@@ -179,6 +215,7 @@ slice_roms() {
 create_zip() {
     local rom_name
     local -a zip_inputs=()
+    local klingon_zip_alias=""
 
     for rom_name in "${ROM_NAMES[@]}"; do
         zip_inputs+=("$ROMS_DIR/$rom_name")
@@ -200,10 +237,26 @@ create_zip() {
         fi
     fi
 
-    (
+    if [[ "$BUILD_KLINGON" == true ]]; then
+        if [[ -f "$KLINGON_OUT_FILE" ]]; then
+            klingon_zip_alias="$KLINGON_ZIP_ALIAS"
+            cp -- "$KLINGON_OUT_FILE" "$klingon_zip_alias"
+            zip_inputs+=("$klingon_zip_alias")
+            log "      Including Klingon language ROM as german.x11 for MAME: $KLINGON_OUT_FILE"
+        else
+            fail "Klingon ROM build was requested but file is missing: $KLINGON_OUT_FILE"
+        fi
+    fi
+
+    if ! (
         cd -- "$ROMS_DIR"
         zip -q -j -X "$ZIP_FILE" "${zip_inputs[@]}"
-    ) || fail "Could not create $ZIP_FILE"
+    ); then
+        [[ -n "$klingon_zip_alias" ]] && rm -f -- "$klingon_zip_alias"
+        fail "Could not create $ZIP_FILE"
+    fi
+
+    [[ -n "$klingon_zip_alias" ]] && rm -f -- "$klingon_zip_alias"
 
     [[ -s "$ZIP_FILE" ]] || fail "ZIP archive was not created: $ZIP_FILE"
     log "      archive: $ZIP_FILE ($(stat -c '%s bytes' "$ZIP_FILE"))"
@@ -216,10 +269,15 @@ parse_arguments() {
                 BUILD_GERMAN=true
                 shift
                 ;;
+            -k|--klingon)
+                BUILD_KLINGON=true
+                shift
+                ;;
             -h|--help)
                 log "Usage: $0 [options]"
                 log "Options:"
                 log "  -g, --german   Also assemble German language expansion and include in zip"
+                log "  -k, --klingon  Also assemble Klingon language expansion and include in zip"
                 log "  -h, --help     Display this help message"
                 exit 0
                 ;;
@@ -228,6 +286,10 @@ parse_arguments() {
                 ;;
         esac
     done
+
+    if [[ "$BUILD_GERMAN" == true && "$BUILD_KLINGON" == true ]]; then
+        fail "The German and Klingon targets are mutually exclusive."
+    fi
 }
 
 main() {
@@ -238,6 +300,9 @@ main() {
     if [[ "$BUILD_GERMAN" == true ]]; then
         ROM_NAMES=("${GERMAN_ROM_NAMES[@]}")
         ZIP_NAME="$GERMAN_ZIP_NAME"
+    elif [[ "$BUILD_KLINGON" == true ]]; then
+        ROM_NAMES=("${GERMAN_ROM_NAMES[@]}")
+        ZIP_NAME="$KLINGON_ZIP_NAME"
     else
         ROM_NAMES=("${ENGLISH_ROM_NAMES[@]}")
         ZIP_NAME="$ENGLISH_ZIP_NAME"
@@ -264,6 +329,8 @@ main() {
 
     if [[ "$BUILD_GERMAN" == true ]]; then
         assemble_german
+    elif [[ "$BUILD_KLINGON" == true ]]; then
+        assemble_klingon
     fi
 
     slice_roms
@@ -276,6 +343,10 @@ main() {
     if [[ "$BUILD_GERMAN" == true ]]; then
         log "  ROM files: $ROMS_DIR/873{a..h}.x{1..8}"
         log "  German ROM: $GERMAN_OUT_FILE"
+    elif [[ "$BUILD_KLINGON" == true ]]; then
+        log "  ROM files: $ROMS_DIR/873{a..h}.x{1..8}"
+        log "  Klingon ROM: $KLINGON_OUT_FILE"
+        log "  ZIP X11:    german.x11 (Klingon ROM alias for MAME)"
     else
         log "  ROM files: $ROMS_DIR/gorf-{a..h}.bin"
     fi

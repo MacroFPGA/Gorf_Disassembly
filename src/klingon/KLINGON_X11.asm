@@ -11,9 +11,14 @@
 ;   $C003  Length-prefixed Klingon message table
 ;   $CC00  JP PROGRAM2_FOREIGN_RESUME
 ;
-; The executable structure is derived from the working program-2 German X11
-; conversion.  Canonical tlhIngan Hol appears in comments and documentation.
-; Display payloads use uppercase, apostrophe-free arcade transliteration.
+; The executable structure is derived from the working Program-2 German X11
+; conversion.  It is a project-created language ROM, not a historical Bally/
+; Midway image.  The 36-entry predecessor-search architecture is independently
+; attested by the  German and French Program-1 X11 ROMs; Klingon keeps
+; that executable contract while supplying project-specific data and speech.
+;
+; Canonical tlhIngan Hol appears in comments and documentation.  Display
+; payloads use uppercase, apostrophe-free arcade transliteration.
 ;
 ; The resident program jumps to $C000 with DE holding the address of an
 ; English speech primitive.  The routine searches a table of 36 program-2
@@ -37,6 +42,9 @@ SPEECH_QUEUE_AFTER_LAST EQU     $D122
 SPEECH_QUEUE_WRITE_PTR  EQU     $D125
 SPEECH_QUEUE_READ_PTR   EQU     $D127
 
+; Program-2 speech primitive addresses.  The first 26 are in the resident
+; speech block.  The next three form the upper-ROM flagship sequence.  $B3BE is
+; the coin/start prompt; $B3D4-$B465 are the randomized game-start records.
 PGM2_SPK_INSERT_COIN   EQU     $115D
 PGM2_SPK_GORF          EQU     $116D
 PGM2_SPK_SPACE         EQU     $1185
@@ -63,9 +71,9 @@ PGM2_SPK_BITE          EQU     $12CE
 PGM2_SPK_HAIL          EQU     $12DB
 PGM2_SPK_ENEMY         EQU     $12FC
 PGM2_SPK_BETCHA        EQU     $1317
-PGM2_SPK_A985          EQU     $A985
-PGM2_SPK_A9A8          EQU     $A9A8
-PGM2_SPK_A9C1          EQU     $A9C1
+PGM2_SPK_FLAGSHIP_INTRO          EQU     $A985        ; "Next time will be harder, but for now"
+PGM2_SPK_GORFIAN_CHRONICLES          EQU     $A9A8        ; "In the Gorfian chronicles"
+PGM2_SPK_FLAGSHIP_HIT          EQU     $A9C1        ; "For hitting my flagship"
 PGM2_SPK_PUSH          EQU     $B3BE
 PGM2_SPK_DOOM          EQU     $B3D4
 PGM2_SPK_SURVIVAL      EQU     $B3EF
@@ -701,33 +709,33 @@ KlingonSpeech_Betcha_End:
 ; Next time will be harder, but for now
 ; tlhIngan Hol: Qatlhqu' poH veb, 'ach DaH:
 ; SC-01: K H AH1 T L H K U PA0 P O H PA0 V EH B PA0 AH1 CH PA0 D AH1 H PA1
-KlingonSpeech_For_A985:
-        DB      KlingonSpeech_For_A985_End - $ - 1
+KlingonSpeech_NextTimeHarder:
+        DB      KlingonSpeech_NextTimeHarder_End - $ - 1
         DB      $19,$1B,$15,$2A,$18,$1B,$19,$28,$03,$25,$26
         DB      $1B,$03,$0F,$3B,$0E,$03,$15,$10,$03,$1E,$15,$1B
         DB      $3E
-KlingonSpeech_For_A985_End:
+KlingonSpeech_NextTimeHarder_End:
         DB      $FF                     ; Preserve following record addresses
 
 ; In the Gorfian chronicles
 ; tlhIngan Hol: Gorf QonoSDaq.
 ; SC-01: G DT O1 R F PA0 K H O N O SH D AH1 K PA1
-KlingonSpeech_For_A9A8:
-        DB      KlingonSpeech_For_A9A8_End - $ - 1
+KlingonSpeech_GorfianChronicles:
+        DB      KlingonSpeech_GorfianChronicles_End - $ - 1
         DB      $1C,$04,$35,$2B,$1D,$03,$19,$1B,$26,$0D,$26
         DB      $11,$1E,$15,$19,$3E
-KlingonSpeech_For_A9A8_End:
+KlingonSpeech_GorfianChronicles_End:
         DB      $FF                     ; Preserve following record addresses
 
 ; You have hit my flagship
 ; tlhIngan Hol: ra'wI' DujwIj DaqIpta'.
 ; SC-01: R AH1 PA0 W I PA0 D U D J W I D J PA0 D AH1 K I P T AH1 PA1
 ; This wording avoids the SC-01 P-to-M transition that destabilizes MAME audio.
-KlingonSpeech_For_A9C1:
-        DB      KlingonSpeech_For_A9C1_End - $ - 1
+KlingonSpeech_FlagshipHit:
+        DB      KlingonSpeech_FlagshipHit_End - $ - 1
         DB      $2B,$15,$03,$2D,$27,$03,$1E,$28,$1E,$1A,$2D
         DB      $27,$1E,$1A,$03,$1E,$15,$19,$27,$25,$2A,$15,$3E
-KlingonSpeech_For_A9C1_End:
+KlingonSpeech_FlagshipHit_End:
         DB      $FF                     ; Preserve following record addresses
 
 ; Push a player button
@@ -836,9 +844,9 @@ KlingonSpeechTable:
         DW      KlingonSpeech_Hail
         DW      KlingonSpeech_Enemy
         DW      KlingonSpeech_Betcha
-        DW      KlingonSpeech_For_A985
-        DW      KlingonSpeech_For_A9A8
-        DW      KlingonSpeech_For_A9C1
+        DW      KlingonSpeech_NextTimeHarder
+        DW      KlingonSpeech_GorfianChronicles
+        DW      KlingonSpeech_FlagshipHit
         DW      KlingonSpeech_Push
         DW      KlingonSpeech_Doom
         DW      KlingonSpeech_Survival
@@ -875,9 +883,9 @@ Pgm2SpeechTable:
         DW      PGM2_SPK_HAIL
         DW      PGM2_SPK_ENEMY
         DW      PGM2_SPK_BETCHA
-        DW      PGM2_SPK_A985
-        DW      PGM2_SPK_A9A8
-        DW      PGM2_SPK_A9C1
+        DW      PGM2_SPK_FLAGSHIP_INTRO
+        DW      PGM2_SPK_GORFIAN_CHRONICLES
+        DW      PGM2_SPK_FLAGSHIP_HIT
         DW      PGM2_SPK_PUSH
         DW      PGM2_SPK_DOOM
         DW      PGM2_SPK_SURVIVAL
@@ -895,8 +903,11 @@ Pgm2SpeechTableEnd:
 ;        BC preserved
 ; USES:  AF, DE, HL
 ;
-; This retains the original X11 search algorithm and ROM layout.  Every speech
-; primitive used by program 2 has an exact, sorted key in Pgm2SpeechTable.
+; This retains the  Gorf X11 36-entry predecessor-search algorithm.
+; The translation keys, resident targets, message ordering, data placement,
+; queue handling, and $CC00 entry are adapted specifically for Program 2.
+; Klingon translation data is layered on that Program-2 interface.  Every
+; speech primitive used by Program 2 has an exact, sorted key in Pgm2SpeechTable.
 ; -----------------------------------------------------------------------------
 
 TranslateSpeechPrimitive:
@@ -1081,9 +1092,13 @@ FillFF2048 MACRO
 ForeignCoinInputEntry:
         JP      PROGRAM2_FOREIGN_RESUME
 
-; The physical X11 device is a 4 KB ROM.  Unused bytes read as $FF.  Its final
-; 14 bytes contain the original DNA identification trailer.  The final three
-; bytes encode the date 12/15/1980.
+; The physical X11 device is a 4 KB ROM.  Unused bytes read as $FF.
+;
+;  French and German Program-1 X11 images share the 13-byte
+; identification record at $CFF3-$CFFF.  Their preceding $CFF2 bytes differ:
+; German stores $00 and French leaves $FF.  Klingon has no historical X11 ROM,
+; so this derivative intentionally retains the $00 inherited from its German
+; Program-2 template.  The final three identification bytes encode 12/15/1980.
         IF      $CFF2 - $ >= 2048
         FillFF2048
         ENDIF
@@ -1121,7 +1136,10 @@ ForeignCoinInputEntry:
         FillFF1
         ENDIF
 
+GermanTemplateTrailerPrefix:
+        DB      $00                     ; Inherited German-template value at $CFF2
+
 RomIdentificationTrailer:
-        DB      $00,$00,"GORF",$00,"DNA",$00,$12,$15,$80
+        DB      $00,"GORF",$00,"DNA",$00,$12,$15,$80
 
         END

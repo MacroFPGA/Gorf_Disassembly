@@ -1,7 +1,6 @@
-<!-- SPEECH_MAP.md -->
 # Gorf Program 2 speech map
 
-This document maps the English speech used by Gorf Program 2. It describes the resident Astrocade/SC-01 data and the game routines that select and combine it. 
+This document maps the English speech used by Gorf Program 2. It describes the resident Astrocade/SC-01 data and the game routines that select and combine it.
 
 ## Speech path
 
@@ -10,6 +9,12 @@ The Astrocade sound system sends encoded phoneme commands to the SC-01 through I
 The Language DIP switch is read from port `$13`, bit `$08`. In English mode, the resident routine queues the requested record directly. In Foreign mode, it passes the resident record address in `DE` to the X11 entry at `$C000`, where the address is translated before it is queued.
 
 The resident queue at `$D112-$D121` holds eight two-byte record pointers. Playback is interrupt-driven. This matters to translated speech because a compound line may enqueue several records while the SC-01 is still consuming an earlier one.
+
+### X11 lookup provenance
+
+The Program-1 German and French X11 ROMs independently implement the same 36-entry sorted predecessor-search design. Their language records and physical layouts differ, but both translate a resident speech-record address through parallel key/target tables before dispatching to the Program-1 queue routine.
+
+The Program-2 language ROMs retain that lookup behavior while substituting Program-2 resident keys, queue dispatch at `$10B8`, and the required `$CC00 -> $1769` foreign-input return. This distinction is important: the historical search algorithm is preserved, but the Program-1 X11 images themselves are not binary-compatible with Program 2.
 
 ## English fragments
 
@@ -43,9 +48,9 @@ The fragment ID below is a documentation index for this map. Gorf itself identif
 | 23 | `SPK_HAIL` | `$12DB` | All hail the supreme Gorfian Empire | 32 |  |
 | 24 | `SPK_ENEMY` | `$12FC` | Another enemy ship destroyed | 26 |  |
 | 25 | `SPK_BETCHA` | `$1317` | Your end draws near | 14 |  |
-| 26 | `UNNAMED_A985` | `$A985` | Next time will be harder, but for now | 34 | Upper-ROM record; unnamed in the main disassembly |
-| 27 | `UNNAMED_A9A8` | `$A9A8` | In the Gorfian chronicles | 24 | Upper-ROM record; unnamed in the main disassembly |
-| 28 | `UNNAMED_A9C1` | `$A9C1` | For hitting my flagship | 21 | Upper-ROM record; unnamed in the main disassembly |
+| 26 | `UNNAMED_A985` | `$A985` | Next time will be harder, but for now | 34 | Upper-ROM flagship-sequence record; X11 sources use semantic alias `FLAGSHIP_INTRO` |
+| 27 | `UNNAMED_A9A8` | `$A9A8` | In the Gorfian chronicles | 24 | Upper-ROM flagship-sequence record; X11 sources use semantic alias `GORFIAN_CHRONICLES` |
+| 28 | `UNNAMED_A9C1` | `$A9C1` | For hitting my flagship | 21 | Upper-ROM flagship-sequence record; X11 sources use semantic alias `FLAGSHIP_HIT` |
 | 29 | `SPK_PUSH` | `$B3BE` | Push a player button | 21 |  |
 | 30 | `SPK_DOOM` | `$B3D4` | You will meet a Gorfian doom | 26 |  |
 | 31 | `SPK_SURVIVAL` | `$B3EF` | Survival is impossible | 21 |  |
@@ -101,3 +106,4 @@ Gorf does not have WoW's numeric phrase-ID table. The following rows enumerate t
 - The translated table must remain sorted by resident key because the X11 lookup terminates as soon as the requested key is less than the current table entry.
 - Compound rank lines must preserve the source order even when the translated `SPK_SPACE` entry is suppressed.
 - Encoded bytes must retain bits 6-7. Masking records to six bits is valid only for direct SC-01 analysis, not for rebuilding the game ROM.
+- Program-2 translated speech must not allow the writer to overtake the reader in the eight-entry `$D112-$D121` queue; the current language ROMs reserve one empty slot before dispatch.

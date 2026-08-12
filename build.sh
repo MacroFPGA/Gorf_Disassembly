@@ -6,6 +6,7 @@ readonly ROM_SIZE=$((0x1000))
 readonly SOURCE_NAME="Gorf_Disassembly.asm"
 readonly ENGLISH_ZIP_NAME="gorf.zip"
 readonly GERMAN_ZIP_NAME="gorfpgm1g.zip"
+readonly FRENCH_ZIP_NAME="gorfpgm1f.zip"
 readonly KLINGON_ZIP_NAME="gorfpgm1g.zip"
 readonly LEGACY_KLINGON_ZIP_NAME="gorfk.zip"
 readonly REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -22,6 +23,12 @@ readonly SC01_FILE="$ROMS_DIR/sc01.bin"
 readonly GERMAN_SOURCE="$SOURCE_DIR/german/GERMAN_X11.asm"
 readonly GERMAN_OUT_FILE="$ROMS_DIR/german.x11"
 
+# French specific paths
+readonly FRENCH_SOURCE="$SOURCE_DIR/french/FRENCH_X11.asm"
+readonly FRENCH_OUT_FILE="$ROMS_DIR/french.x11"
+readonly FRENCH_ZIP_ALIAS="$BUILD_DIR/french_gorf.x11"
+readonly LEGACY_FRENCH_OUT_FILE="$ROMS_DIR/french_gorf.x11"
+
 # Klingon specific paths
 readonly KLINGON_SOURCE="$SOURCE_DIR/klingon/KLINGON_X11.asm"
 readonly KLINGON_OUT_FILE="$ROMS_DIR/klingon.x11"
@@ -33,10 +40,18 @@ readonly -a ENGLISH_ROM_NAMES=(
     "gorf-e.bin" "gorf-f.bin" "gorf-g.bin" "gorf-h.bin"
 )
 
-# Program-2 foreign ROM array names
+# Program-2 German/Klingon MAME member names
 readonly -a GERMAN_ROM_NAMES=(
     "873a.x1" "873b.x2" "873c.x3" "873d.x4"
     "873e.x5" "873f.x6" "873g.x7" "873h.x8"
+)
+
+# MAME's French Program-1 clone uses a different CPU member naming convention.
+# The bytes still come from the Program-2 CPU image; only the ZIP member names
+# are selected to satisfy the gorfpgm1f driver.
+readonly -a FRENCH_ROM_NAMES=(
+    "gorf_a.x1" "gorf_b.x2" "gorf_c.x3" "gorf_d.x4"
+    "gorf_e.x5" "gorf_f.x6" "gorf_g.x7" "gorf_h.x8"
 )
 
 readonly -a ROM_ADDRESSES=(
@@ -46,6 +61,7 @@ readonly -a ROM_ADDRESSES=(
 
 # Global configuration variable controlled by arguments
 BUILD_GERMAN=false
+BUILD_FRENCH=false
 BUILD_KLINGON=false
 ZIP_NAME=""
 ZIP_FILE=""
@@ -95,12 +111,13 @@ prepare_output_directories() {
     mkdir -p -- "$BUILD_DIR" "$ROMS_DIR"
     
     # Clean up files matching both potential naming schemas
-    for name in "${ENGLISH_ROM_NAMES[@]}" "${GERMAN_ROM_NAMES[@]}"; do
+    for name in "${ENGLISH_ROM_NAMES[@]}" "${GERMAN_ROM_NAMES[@]}" "${FRENCH_ROM_NAMES[@]}"; do
         rm -f -- "$ROMS_DIR/$name"
     done
     rm -f -- "$GERMAN_OUT_FILE"
+    rm -f -- "$FRENCH_OUT_FILE" "$LEGACY_FRENCH_OUT_FILE"
     rm -f -- "$KLINGON_OUT_FILE"
-    rm -f -- "$ROMS_DIR/$ENGLISH_ZIP_NAME" "$ROMS_DIR/$GERMAN_ZIP_NAME" "$ROMS_DIR/$LEGACY_KLINGON_ZIP_NAME"
+    rm -f -- "$ROMS_DIR/$ENGLISH_ZIP_NAME" "$ROMS_DIR/$GERMAN_ZIP_NAME" "$ROMS_DIR/$FRENCH_ZIP_NAME" "$ROMS_DIR/$LEGACY_KLINGON_ZIP_NAME"
 }
 
 assemble_source() {
@@ -152,6 +169,33 @@ assemble_german() {
     (( german_size == ROM_SIZE )) || fail "German ROM is $german_size bytes; expected $ROM_SIZE"
     cp -- "$german_tmp_cim" "$GERMAN_OUT_FILE"
     log "      german: $GERMAN_OUT_FILE ($(stat -c '%s bytes' "$GERMAN_OUT_FILE"))"
+}
+
+assemble_french() {
+    [[ -f "$FRENCH_SOURCE" ]] || fail "French source file not found: $FRENCH_SOURCE"
+    log "[2.5/4] Assembling Optional French ROM: FRENCH_X11.asm"
+    local french_tmp_cim="$BUILD_DIR/FRENCH_X11.cim"
+
+    if "$ZMAC_BIN" --version 2>&1 | grep -q '1\.3'; then
+        log "      Detected zmac v1.3 compatibility mode for French ROM"
+        (
+            cd -- "$REPO_ROOT"
+            "$ZMAC_BIN" -o "$french_tmp_cim" -x "$BUILD_DIR/FRENCH_X11.lst" "$FRENCH_SOURCE"
+        ) || fail "zmac v1.3 failed on French ROM."
+    else
+        log "      Detected modern zmac mode for French ROM"
+        (
+            cd -- "$REPO_ROOT"
+            "$ZMAC_BIN" -I "$REPO_ROOT" -I "$SOURCE_DIR" -I "$SOURCE_DIR/french" --od "$BUILD_DIR" --oo cim,lst "$FRENCH_SOURCE"
+        ) || fail "zmac failed on French ROM."
+    fi
+
+    [[ -s "$french_tmp_cim" ]] || fail "zmac did not create $french_tmp_cim"
+    local french_size
+    french_size="$(stat -c '%s' "$french_tmp_cim")"
+    (( french_size == ROM_SIZE )) || fail "French ROM is $french_size bytes; expected $ROM_SIZE"
+    cp -- "$french_tmp_cim" "$FRENCH_OUT_FILE"
+    log "      french: $FRENCH_OUT_FILE ($(stat -c '%s bytes' "$FRENCH_OUT_FILE"))"
 }
 
 assemble_klingon() {
@@ -215,18 +259,16 @@ slice_roms() {
 create_zip() {
     local rom_name
     local -a zip_inputs=()
+    local french_zip_alias=""
     local klingon_zip_alias=""
 
     for rom_name in "${ROM_NAMES[@]}"; do
         zip_inputs+=("$ROMS_DIR/$rom_name")
     done
 
-    if [[ -f "$SC01_FILE" ]]; then
-        zip_inputs+=("$SC01_FILE")
-        log "      Including optional speech ROM: $SC01_FILE"
-    else
-        log "      Optional speech ROM not found; sc01.bin will not be included."
-    fi
+    [[ -f "$SC01_FILE" ]] || fail "Required speech ROM not found: $SC01_FILE"
+    zip_inputs+=("$SC01_FILE")
+    log "      Including required speech ROM: $SC01_FILE"
 
     if [[ "$BUILD_GERMAN" == true ]]; then
         if [[ -f "$GERMAN_OUT_FILE" ]]; then
@@ -234,6 +276,17 @@ create_zip() {
             log "      Including optional German language ROM: $GERMAN_OUT_FILE"
         else
             fail "German ROM build was requested but file is missing: $GERMAN_OUT_FILE"
+        fi
+    fi
+
+    if [[ "$BUILD_FRENCH" == true ]]; then
+        if [[ -f "$FRENCH_OUT_FILE" ]]; then
+            french_zip_alias="$FRENCH_ZIP_ALIAS"
+            cp -- "$FRENCH_OUT_FILE" "$french_zip_alias"
+            zip_inputs+=("$french_zip_alias")
+            log "      Including French language ROM as french_gorf.x11 for MAME: $FRENCH_OUT_FILE"
+        else
+            fail "French ROM build was requested but file is missing: $FRENCH_OUT_FILE"
         fi
     fi
 
@@ -252,10 +305,12 @@ create_zip() {
         cd -- "$ROMS_DIR"
         zip -q -j -X "$ZIP_FILE" "${zip_inputs[@]}"
     ); then
+        [[ -n "$french_zip_alias" ]] && rm -f -- "$french_zip_alias"
         [[ -n "$klingon_zip_alias" ]] && rm -f -- "$klingon_zip_alias"
         fail "Could not create $ZIP_FILE"
     fi
 
+    [[ -n "$french_zip_alias" ]] && rm -f -- "$french_zip_alias"
     [[ -n "$klingon_zip_alias" ]] && rm -f -- "$klingon_zip_alias"
 
     [[ -s "$ZIP_FILE" ]] || fail "ZIP archive was not created: $ZIP_FILE"
@@ -269,6 +324,10 @@ parse_arguments() {
                 BUILD_GERMAN=true
                 shift
                 ;;
+            -f|--french)
+                BUILD_FRENCH=true
+                shift
+                ;;
             -k|--klingon)
                 BUILD_KLINGON=true
                 shift
@@ -276,8 +335,9 @@ parse_arguments() {
             -h|--help)
                 log "Usage: $0 [options]"
                 log "Options:"
-                log "  -g, --german   Also assemble German language expansion and include in zip"
-                log "  -k, --klingon  Also assemble Klingon language expansion and include in zip"
+                log "  -g, --german   Assemble German Program-2 X11 and package gorfpgm1g.zip"
+                log "  -f, --french   Assemble French Program-2 X11 and package gorfpgm1f.zip"
+                log "  -k, --klingon  Assemble Klingon Program-2 X11 and package through gorfpgm1g.zip"
                 log "  -h, --help     Display this help message"
                 exit 0
                 ;;
@@ -287,9 +347,11 @@ parse_arguments() {
         esac
     done
 
-    if [[ "$BUILD_GERMAN" == true && "$BUILD_KLINGON" == true ]]; then
-        fail "The German and Klingon targets are mutually exclusive."
-    fi
+    local selected=0
+    [[ "$BUILD_GERMAN" == true ]] && ((selected += 1))
+    [[ "$BUILD_FRENCH" == true ]] && ((selected += 1))
+    [[ "$BUILD_KLINGON" == true ]] && ((selected += 1))
+    (( selected <= 1 )) || fail "The German, French, and Klingon targets are mutually exclusive."
 }
 
 main() {
@@ -300,6 +362,9 @@ main() {
     if [[ "$BUILD_GERMAN" == true ]]; then
         ROM_NAMES=("${GERMAN_ROM_NAMES[@]}")
         ZIP_NAME="$GERMAN_ZIP_NAME"
+    elif [[ "$BUILD_FRENCH" == true ]]; then
+        ROM_NAMES=("${FRENCH_ROM_NAMES[@]}")
+        ZIP_NAME="$FRENCH_ZIP_NAME"
     elif [[ "$BUILD_KLINGON" == true ]]; then
         ROM_NAMES=("${GERMAN_ROM_NAMES[@]}")
         ZIP_NAME="$KLINGON_ZIP_NAME"
@@ -329,6 +394,8 @@ main() {
 
     if [[ "$BUILD_GERMAN" == true ]]; then
         assemble_german
+    elif [[ "$BUILD_FRENCH" == true ]]; then
+        assemble_french
     elif [[ "$BUILD_KLINGON" == true ]]; then
         assemble_klingon
     fi
@@ -343,6 +410,10 @@ main() {
     if [[ "$BUILD_GERMAN" == true ]]; then
         log "  ROM files: $ROMS_DIR/873{a..h}.x{1..8}"
         log "  German ROM: $GERMAN_OUT_FILE"
+    elif [[ "$BUILD_FRENCH" == true ]]; then
+        log "  ROM files: $ROMS_DIR/gorf_{a..h}.x{1..8}"
+        log "  French ROM: $FRENCH_OUT_FILE"
+        log "  ZIP X11:    french_gorf.x11"
     elif [[ "$BUILD_KLINGON" == true ]]; then
         log "  ROM files: $ROMS_DIR/873{a..h}.x{1..8}"
         log "  Klingon ROM: $KLINGON_OUT_FILE"

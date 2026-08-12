@@ -6,6 +6,16 @@
 ; CRC-32:   D9BB9F11
 ; SHA-1:    D19DDA593369988BE931A54149DF88C0411DD05D
 ;
+; Historical Program-1 source:
+;   german.x11
+;   CRC-32: 3A3DBDCB
+;   SHA-1:  E20895D41D66D1A23CC445E4AE4628B16EBF83F2
+;
+; The  German and French Program-1 X11 ROMs independently implement
+; the same 36-entry predecessor-search translator.  This Program-2 derivative
+; preserves that lookup algorithm but intentionally retargets resident keys,
+; message layout, queue dispatch, and the mandatory $CC00 foreign-input hook.
+;
 ; Interface used by Gorf program 2:
 ;
 ;   $C000  JP TranslateSpeechPrimitive
@@ -35,8 +45,8 @@ SPEECH_QUEUE_WRITE_PTR  EQU     $D125
 SPEECH_QUEUE_READ_PTR   EQU     $D127
 
 ; Program-2 speech primitive addresses.  The first 26 are in the resident
-; speech block.  The next three are upper-ROM records not yet named in the
-; program-2 source, and the final seven are attract-mode speech records.
+; speech block.  The next three form the upper-ROM flagship sequence.  $B3BE is
+; the coin/start prompt; $B3D4-$B465 are the randomized game-start records.
 PGM2_SPK_INSERT_COIN    EQU     $115D
 PGM2_SPK_GORF           EQU     $116D
 PGM2_SPK_SPACE          EQU     $1185
@@ -63,9 +73,9 @@ PGM2_SPK_BITE           EQU     $12CE
 PGM2_SPK_HAIL           EQU     $12DB
 PGM2_SPK_ENEMY          EQU     $12FC
 PGM2_SPK_BETCHA         EQU     $1317
-PGM2_SPK_A985           EQU     $A985
-PGM2_SPK_A9A8           EQU     $A9A8
-PGM2_SPK_A9C1           EQU     $A9C1
+PGM2_SPK_FLAGSHIP_INTRO           EQU     $A985        ; "Next time will be harder, but for now"
+PGM2_SPK_GORFIAN_CHRONICLES           EQU     $A9A8        ; "In the Gorfian chronicles"
+PGM2_SPK_FLAGSHIP_HIT           EQU     $A9C1        ; "For hitting my flagship"
 PGM2_SPK_PUSH           EQU     $B3BE
 PGM2_SPK_DOOM           EQU     $B3D4
 PGM2_SPK_SURVIVAL       EQU     $B3EF
@@ -89,7 +99,7 @@ X11Entry:
 ;       DB payload_length, payload...
 ;
 ; The table contains all 52 program-2 indexes in the exact order expected by
-; the resident program.  Authentic German program-1 wording is retained where
+; the resident program.   German program-1 wording is retained where
 ; the program-2 display composition is compatible.  Reordered or new program-2
 ; records are translated separately.  The blank and binary records at indexes
 ; 42 through 47 must remain byte-for-byte compatible with program 2.
@@ -492,14 +502,14 @@ GermanSpeech_Hail:
         DB      $36,$1F,$3E
 GermanSpeech_Hail_End:
 
-GermanSpeech_For_A985:
-        DB      GermanSpeech_For_A985_End - $ - 1
+GermanSpeech_NextTimeHarder:
+        DB      GermanSpeech_NextTimeHarder_End - $ - 1
         DB      $3E,$3E,$4D,$45,$62,$1B,$1B,$1F,$2A,$02,$1F,$0C
         DB      $08,$08,$18,$03,$0F,$21,$2B,$1F,$2A,$03,$5E,$68
         DB      $1E,$0A,$09,$2B,$1E,$3C,$03,$2A,$52,$46,$45,$0D
         DB      $23,$03,$30,$36,$36,$1F,$0E,$08,$09,$1F,$01,$0D
         DB      $3E
-GermanSpeech_For_A985_End:
+GermanSpeech_NextTimeHarder_End:
 
 GermanSpeech_Nice:
         DB      GermanSpeech_Nice_End - $ - 1
@@ -536,14 +546,14 @@ GermanSpeech_Betcha:
         DB      $03,$11,$18,$05,$05,$04,$1B,$1C,$2A,$3E
 GermanSpeech_Betcha_End:
 
-GermanSpeech_For_A9A8:
-        DB      GermanSpeech_For_A9A8_End - $ - 1
+GermanSpeech_GorfianChronicles:
+        DB      GermanSpeech_GorfianChronicles_End - $ - 1
         DB      $3E,$3E,$08,$08,$0E,$00,$2B,$03,$22,$41,$6A,$52
         DB      $2A,$03,$1C,$06,$21,$1F,$2A,$03,$1E,$28,$03,$0B
         DB      $0D,$03,$1E,$3C,$03,$1C,$01,$51,$4B,$5B,$5B,$2A
         DB      $31,$03,$1E,$01,$2B,$03,$1C,$04,$35,$2B,$1D,$1F
         DB      $03,$03,$08,$08,$09,$0D,$3E
-GermanSpeech_For_A9A8_End:
+GermanSpeech_GorfianChronicles_End:
 
 GermanSpeech_Prepare:
         DB      GermanSpeech_Prepare_End - $ - 1
@@ -553,13 +563,13 @@ GermanSpeech_Prepare:
         DB      $35,$2B,$3E,$3E
 GermanSpeech_Prepare_End:
 
-GermanSpeech_For_A9C1:
-        DB      GermanSpeech_For_A9C1_End - $ - 1
+GermanSpeech_FlagshipHit:
+        DB      GermanSpeech_FlagshipHit_End - $ - 1
         DB      $3E,$3E,$5D,$76,$76,$2B,$03,$1E,$08,$08,$1F,$03
         DB      $08,$08,$0E,$51,$7C,$1F,$00,$0D,$03,$0C,$48,$49
         DB      $0D,$00,$1F,$03,$1D,$18,$08,$1C,$51,$49,$4A,$1D
         DB      $00,$1F,$3E
-GermanSpeech_For_A9C1_End:
+GermanSpeech_FlagshipHit_End:
 
 GermanSpeech_Promote:
         DB      GermanSpeech_Promote_End - $ - 1
@@ -638,9 +648,9 @@ GermanSpeechTable:
         DW      GermanSpeech_Hail
         DW      GermanSpeech_Enemy
         DW      GermanSpeech_Betcha
-        DW      GermanSpeech_For_A985
-        DW      GermanSpeech_For_A9A8
-        DW      GermanSpeech_For_A9C1
+        DW      GermanSpeech_NextTimeHarder
+        DW      GermanSpeech_GorfianChronicles
+        DW      GermanSpeech_FlagshipHit
         DW      GermanSpeech_Push
         DW      GermanSpeech_Doom
         DW      GermanSpeech_Survival
@@ -677,9 +687,9 @@ Pgm2SpeechTable:
         DW      PGM2_SPK_HAIL
         DW      PGM2_SPK_ENEMY
         DW      PGM2_SPK_BETCHA
-        DW      PGM2_SPK_A985
-        DW      PGM2_SPK_A9A8
-        DW      PGM2_SPK_A9C1
+        DW      PGM2_SPK_FLAGSHIP_INTRO
+        DW      PGM2_SPK_GORFIAN_CHRONICLES
+        DW      PGM2_SPK_FLAGSHIP_HIT
         DW      PGM2_SPK_PUSH
         DW      PGM2_SPK_DOOM
         DW      PGM2_SPK_SURVIVAL
@@ -697,8 +707,11 @@ Pgm2SpeechTableEnd:
 ;        BC preserved
 ; USES:  AF, DE, HL
 ;
-; This retains the original X11 search algorithm and ROM layout.  Every speech
-; primitive used by program 2 has an exact, sorted key in Pgm2SpeechTable.
+; This retains the  Gorf X11 36-entry predecessor-search algorithm.
+; The translation keys, resident targets, message ordering, data placement,
+; queue handling, and $CC00 entry are adapted specifically for Program 2.
+; Every speech primitive used by Program 2 has an exact, sorted key in
+; Pgm2SpeechTable.
 ; -----------------------------------------------------------------------------
 
 TranslateSpeechPrimitive:
@@ -883,8 +896,13 @@ FillFF2048 MACRO
 ForeignCoinInputEntry:
         JP      PROGRAM2_FOREIGN_RESUME
 
-; The physical X11 device is a 4 KB ROM.  Unused bytes read as $FF.  Its final
-; 14 bytes contain the original DNA identification trailer.
+; The physical X11 device is a 4 KB ROM.  Unused bytes read as $FF.
+;
+; French and German Program-1 X11 images share the 13-byte identification
+; record at $CFF3-$CFFF.  The preceding byte at $CFF2 is not part of that
+; common record:  German stores $00 there, while  French
+; leaves it erased ($FF).  Preserve the German $CFF2 value explicitly so this
+; comment-only/source-structure correction does not change the verified image.
         IF      $CFF2 - $ >= 2048
         FillFF2048
         ENDIF
@@ -922,7 +940,10 @@ ForeignCoinInputEntry:
         FillFF1
         ENDIF
 
+GermanTrailerPrefix:
+        DB      $00                     ;  German value at $CFF2
+
 RomIdentificationTrailer:
-        DB      $00,$00,"GORF",$00,"DNA",$00,$12,$15,$80
+        DB      $00,"GORF",$00,"DNA",$00,$12,$15,$80
 
         END

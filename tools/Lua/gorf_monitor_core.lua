@@ -3,12 +3,7 @@
 local C = {}
 C.module_name = "core"
 C.api_version = 1
-C.revision = "2.0.2-20260803"
-
--- Add this to the very top of your file alongside your local initializations
-if not G_logged_discoveries then
-    G_logged_discoveries = {}
-end
+C.revision = "2.3.1-20260812"
 
 
 -- At $0060 DSPATCH has fetched the target into HL and advanced BC past the
@@ -20,11 +15,26 @@ local TERSE_DISPATCH_EXECUTION = 0x0060
 -- identifies the opcode byte and IY identifies one of the two music engines.
 local MUSIC_OPCODE_EXECUTION = 0x0F37
 
--- These are behavioral descriptions of otherwise unnamed native targets. They
--- are kept separate from exact source symbols and displayed as decoded detail.
-local TARGET_DESCRIPTIONS = {
-    [0x0F98] = "SERVICES BOTH MUSIC ENGINES"
+-- These native primitives transfer control to a runtime-selected threaded
+-- word.  When that destination is a colon definition, its _ENTER pushes the
+-- caller's continuation onto IX.  They are indirect calls, not ordinary
+-- primitives and not high-level entry points themselves.
+local DYNAMIC_CALL_TARGETS = {
+    [0x0468] = true, -- _CASES
+    [0x1472] = true  -- _EXECUTE
 }
+
+local LOOP_ENTER_TARGET = 0x0244 -- _DO
+local LOOP_EXIT_TARGETS = {
+    [0x025F] = true, -- _LOOP
+    [0x0397] = true  -- _plusLOOP
+}
+
+-- IX is shared by colon continuations, loop-control triples, and arbitrary
+-- values moved with >R/R>.  These two standard TERSE primitives must therefore
+-- be distinguished from ordinary call/return activity.
+local RETURN_DATA_POP_TARGET = 0x00B4  -- _Rgt (R>)
+local RETURN_DATA_PUSH_TARGET = 0x00C1 -- _gtR (>R)
 
 function C.hex(value, width)
     return string.format("%0" .. tostring(width or 4) .. "X", (value or 0) & 0xFFFF)
@@ -121,23 +131,44 @@ function C.u16(address)
     return low | (high << 8)
 end
 
+function C.u16_direct(address)
+    local low = C.u8_direct(address)
+    local high = C.u8_direct(address + 1)
+    return low | (high << 8)
+end
+
 function C.bcd_score(address)
     return string.format("%02X%02X%02X", C.u8(address + 2), C.u8(address + 1), C.u8(address))
 end
 
-function C.label(address)
+function C.exact_symbol(address)
     address = address & 0xFFFF
-    return C.g.data.entries[address] or C.g.data.symbols[address]
-        or C.g.runtime.lst_symbols[address]
-        or ("$" .. C.hex(address))
+    local imported = C.g.runtime.lst_symbols[address]
+    if imported then return imported, "LST" end
+    local builtin = C.g.data.symbols[address] or C.g.data.entries[address]
+    if builtin then return builtin, "ASM" end
+    return nil, nil
+end
+
+function C.annotation(address)
+    local annotation = C.g.data.annotations and C.g.data.annotations[address & 0xFFFF]
+    if type(annotation) == "table" then
+        return annotation.description or annotation.name, annotation.confidence or "ANNOTATION"
+    end
+    if annotation then return annotation, "ANNOTATION" end
+    return nil, nil
+end
+
+function C.label(address)
+    local exact = C.exact_symbol(address)
+    return exact or ("$" .. C.hex(address))
 end
 
 function C.target_decode(address, high_level)
-    local builtin = C.g.data.entries[address] or C.g.data.symbols[address]
-    local imported = not builtin and C.g.runtime.lst_symbols[address] or nil
-    local exact = builtin or imported
+    local exact, source = C.exact_symbol(address)
+    local description, description_source = C.annotation(address)
     local nearest = nil
-    
+
     if not exact then
         local candidate = C.pc_label(address)
         if candidate ~= "$" .. C.hex(address) then
@@ -150,37 +181,26 @@ function C.target_decode(address, high_level)
         local b0 = C.u8_direct(address)
         local b1 = C.u8_direct(address + 1)
         local b2 = C.u8_direct(address + 2)
-        
-        -- Check if it's a TERSE Jump block (RST 08)
-        if b0 == 0xCF then
-            -- Reconstruct the Little-Endian 16-bit pointer value (e.g. $2C + $B300 = $B32C)
-            local target_ptr = b1 + (b2 * 256)
-            
-            -- Look up if this resolved destination has a mapped name
-            local ptr_name = C.g.data.entries[target_ptr] or C.g.data.symbols[target_ptr]
-            
-            if ptr_name then
-                stream_preview = string.format("[RST08 -> %s]", ptr_name)
-            else
-                stream_preview = string.format("[RST08 -> $%04X]", target_ptr)
-            end
+
+        if high_level and b0 == 0xCF then
+            local first_target = b1 | (b2 << 8)
+            local first_name = C.exact_symbol(first_target)
+            stream_preview = string.format("ENTER -> $%04X%s", first_target,
+                first_name and (" " .. first_name) or "")
         else
-            -- Fallback for regular primitive assembly blocks
-            local n0 = C.g.data.entries[b0] or string.format("$%02X", b0)
-            local n1 = C.g.data.entries[b1] or string.format("$%02X", b1)
-            local n2 = C.g.data.entries[b2] or string.format("$%02X", b2)
-            stream_preview = string.format("[%s %s %s]", n0, n1, n2)
+            stream_preview = string.format("BYTES %02X %02X %02X", b0, b1, b2)
         end
     end
 
     return {
         exact_name = exact,
-        exact_source = builtin and "BUILT-IN" or (imported and "LST" or nil),
-        display_name = exact or (high_level and "UNKNOWN TERSE WORD" or "UNKNOWN NATIVE TARGET"),
+        exact_source = source,
+        display_name = exact or string.format(high_level and "TERSE_$%04X" or "NATIVE_$%04X", address),
         class = high_level and "TERSE WORD" or "NATIVE PRIMITIVE",
-        description = TARGET_DESCRIPTIONS and TARGET_DESCRIPTIONS[address] or nil,
+        description = description,
+        description_source = description and description_source or nil,
         nearest_symbol = nearest,
-        terse_stream_preview = stream_preview 
+        terse_stream_preview = stream_preview
     }
 end
 
@@ -198,7 +218,8 @@ function C.pc_label(address)
         end
     end
     if not best or address - best > 0x0100 then return "$" .. C.hex(address) end
-    local name = C.g.data.symbols[best] or C.g.runtime.lst_symbols[best]
+    local name = C.exact_symbol(best)
+    if not name then return "$" .. C.hex(address) end
     if address == best then return name end
     return name .. "+$" .. C.hex(address - best, 2)
 end
@@ -223,6 +244,193 @@ function C.stack_words(pointer, base, maximum)
     return values
 end
 
+function C.return_depth(pointer)
+    local base = C.g.data.address.RSP
+    if pointer > base or pointer < 0xD000 or ((base - pointer) & 1) ~= 0 then return 0 end
+    return (base - pointer) // 2
+end
+
+function C.parameter_depth(pointer)
+    local base = C.g.data.address.PSP
+    if pointer > base or pointer < 0xD000 or ((base - pointer) & 1) ~= 0 then return 0 end
+    return (base - pointer) // 2
+end
+
+function C.rebuild_entry_order()
+    local seen, order = {}, {}
+    for address in pairs(C.g.data.entries) do seen[address] = true end
+    for address in pairs(C.g.runtime.dynamic_entries) do seen[address] = true end
+    for address in pairs(seen) do order[#order + 1] = address end
+    table.sort(order)
+    C.g.runtime.entry_order = order
+end
+
+function C.register_entry(address)
+    address = address & 0xFFFF
+    if C.g.runtime.dynamic_entries[address] then return end
+    C.g.runtime.dynamic_entries[address] = true
+    C.rebuild_entry_order()
+end
+
+function C.entry_context(address)
+    local order = C.g.runtime.entry_order
+    local low, high, best = 1, #order, nil
+    while low <= high do
+        local middle = (low + high) // 2
+        if order[middle] <= address then
+            best = order[middle]
+            low = middle + 1
+        else
+            high = middle - 1
+        end
+    end
+    if not best or ((address - best) & 0xFFFF) > 0x0400 then return nil end
+    return { address = best, name = C.exact_symbol(best) or ("TERSE_$" .. C.hex(best)) }
+end
+
+-- IX is the real TERSE return-stack pointer.  Colon definitions contribute
+-- two-byte continuations, DO loops contribute three cells, and >R may place an
+-- arbitrary value there.  Raw cells are rebuilt on every dispatch; a small
+-- address-keyed provenance map preserves only frame types that were directly
+-- observed after the current trace was armed.
+function C.stack_fingerprint(values)
+    local hash = (0x811C9DC5 ~ #values) & 0xFFFFFFFF
+    for _, value in ipairs(values) do
+        hash = ((hash ~ (value & 0xFF)) * 0x01000193) & 0xFFFFFFFF
+        hash = ((hash ~ ((value >> 8) & 0xFF)) * 0x01000193) & 0xFFFFFFFF
+    end
+    return hash
+end
+
+function C.stack_snapshot(pointer, base)
+    local depth
+    if base == C.g.data.address.RSP then
+        depth = C.return_depth(pointer)
+    else
+        depth = C.parameter_depth(pointer)
+    end
+    local values = C.stack_words(pointer, base, depth)
+    return values, depth, C.stack_fingerprint(values)
+end
+
+function C.is_loop_frame(values, index)
+    if index + 2 > #values then return false end
+    local loop_start = values[index + 2]
+    if loop_start < 2 or loop_start > 0xBFFF then return false end
+    return C.u16_direct(loop_start - 2) == LOOP_ENTER_TARGET
+end
+
+local function call_return_kind(owner, return_address, cell_address)
+    local provenance = C.g.state.return_provenance[cell_address]
+    if provenance == "return_data" then return nil end
+    if provenance == "call" then
+        return "observed", owner and owner.address or nil
+    end
+    if return_address < 2 then return nil end
+
+    -- A direct colon call leaves its callee address in the threaded cell just
+    -- before the saved continuation.  EXECUTE and CASES are the two known
+    -- runtime-selected call sites; their preceding cell names the dispatcher
+    -- primitive rather than the selected callee.
+    local source_target = C.u16_direct((return_address - 2) & 0xFFFF)
+    if C.u8_direct(source_target) == 0xCF then
+        if owner and source_target == owner.address then
+            return "direct", source_target
+        end
+        -- Tracing may be armed after an outer call has already pushed its
+        -- continuation.  The preceding threaded cell plus an _ENTER opcode
+        -- still proves a colon call even when live provenance and the current
+        -- owner walk are unavailable.
+        return "structural", source_target
+    end
+    if DYNAMIC_CALL_TARGETS[source_target] then
+        return "dynamic", owner and owner.address or nil
+    end
+    return nil
+end
+
+-- Reconstruct typed IX frames.  Loop triples are recognized structurally,
+-- directly observed >R values retain return_data provenance, and call cells
+-- must either have observed call provenance or validate against their call
+-- site.  Anything else remains unknown; it must not create a named frame or
+-- change the caller context.
+function C.reconstruct_call_stack(ip, ix, return_values)
+    local values = return_values
+    if not values then values = C.stack_snapshot(ix, C.g.data.address.RSP) end
+
+    local call_frames, loop_frames, data_frames, unknown_frames, stack_frames = {}, {}, {}, {}, {}
+    local context = C.entry_context(ip)
+    local owner = context
+    local index = 1
+    while index <= #values do
+        local cell_address = (ix + ((index - 1) * 2)) & 0xFFFF
+        local provenance = C.g.state.return_provenance[cell_address]
+        if provenance == "return_data" then
+            local frame = {
+                frame_type = "return_data",
+                value = values[index],
+                cell_address = cell_address,
+                physical_slot = index,
+                level = #data_frames + 1
+            }
+            data_frames[#data_frames + 1] = frame
+            stack_frames[#stack_frames + 1] = frame
+            index = index + 1
+        elseif C.is_loop_frame(values, index) then
+            local frame = {
+                frame_type = "loop",
+                index = values[index],
+                limit = values[index + 1],
+                loop_start = values[index + 2],
+                physical_slot = index,
+                context_address = owner and owner.address or nil,
+                context_name = owner and owner.name or nil,
+                cell_address = cell_address,
+                level = #loop_frames + 1
+            }
+            loop_frames[#loop_frames + 1] = frame
+            stack_frames[#stack_frames + 1] = frame
+            index = index + 3
+        else
+            local value = values[index]
+            local call_kind, call_address =
+                call_return_kind(owner, value, cell_address)
+            if call_kind then
+                local frame_address = call_address or (owner and owner.address or nil)
+                local frame = {
+                    frame_type = "call",
+                    address = frame_address,
+                    name = frame_address and (C.exact_symbol(frame_address)
+                        or ("TERSE_$" .. C.hex(frame_address)))
+                        or "UNRESOLVED FRAME",
+                    return_address = value,
+                    call_site = (value - 2) & 0xFFFF,
+                    call_kind = call_kind,
+                    cell_address = cell_address,
+                    physical_slot = index,
+                    level = #call_frames + 1
+                }
+                call_frames[#call_frames + 1] = frame
+                stack_frames[#stack_frames + 1] = frame
+                owner = C.entry_context((value - 2) & 0xFFFF)
+            else
+                local frame = {
+                    frame_type = "unknown",
+                    value = value,
+                    cell_address = cell_address,
+                    physical_slot = index,
+                    level = #unknown_frames + 1
+                }
+                unknown_frames[#unknown_frames + 1] = frame
+                stack_frames[#stack_frames + 1] = frame
+            end
+            index = index + 1
+        end
+    end
+    return call_frames, #values, context, loop_frames, stack_frames,
+        data_frames, unknown_frames
+end
+
 function C.inline_detail(ip, target)
     local kind = C.g.data.inline_words[target]
     if not kind then return nil end
@@ -230,7 +438,7 @@ function C.inline_detail(ip, target)
         return "#$" .. C.hex(C.u8_direct(ip + 2), 2)
     elseif kind == "word" or kind == "address" then
         local value = C.u8_direct(ip + 2) | (C.u8_direct(ip + 3) << 8)
-        local symbol = C.g.data.symbols[value] or C.g.data.entries[value]
+        local symbol = C.exact_symbol(value)
         return symbol and ("$" .. C.hex(value) .. " " .. symbol) or ("#$" .. C.hex(value))
     elseif kind == "branch" then
         local value = C.u8_direct(ip + 2) | (C.u8_direct(ip + 3) << 8)
@@ -245,6 +453,87 @@ function C.inline_detail(ip, target)
     return nil
 end
 
+function C.dispatch_kind(target, high_level)
+    if target == 0x0061 then return "return" end
+    if DYNAMIC_CALL_TARGETS[target] then return "dynamic_call" end
+    if high_level then return "call" end
+    return "word"
+end
+
+function C.same_dispatch(left, right)
+    if not left or not right then return false end
+    return left.dispatcher_pc == right.dispatcher_pc
+        and left.ip == right.ip
+        and left.next_bc == right.next_bc
+        and left.target == right.target
+        and left.sp == right.sp
+        and left.ix == right.ix
+        and left.iy == right.iy
+        and left.return_stack_fingerprint == right.return_stack_fingerprint
+        and left.parameter_stack_fingerprint == right.parameter_stack_fingerprint
+end
+
+-- Classify the IX change caused by the event in `before`.  A positive delta
+-- removes cells because IX grows toward its empty-stack base at RSP.
+function C.transition_effect(before, after)
+    if not before or not after then return "none", 0 end
+    if after.repeated_state and after.repeated_of_sequence == before.sequence then
+        return "repeated_state", 0
+    end
+
+    local delta = after.ix - before.ix
+    if delta == 0 then return "none", 0 end
+    if (delta & 1) ~= 0 then return "odd_stack_delta", delta end
+
+    local cells = math.abs(delta) // 2
+    if delta > 6 then return "nonlocal_unwind", cells end
+    if before.target == LOOP_ENTER_TARGET and delta == -6 then
+        return "loop_enter", cells
+    end
+    if LOOP_EXIT_TARGETS[before.target] and delta == 6 then
+        return "loop_exit", cells
+    end
+    if before.target == RETURN_DATA_PUSH_TARGET and delta == -2 then
+        return "return_data_push", cells
+    end
+    if before.target == RETURN_DATA_POP_TARGET and delta == 2 then
+        return "return_data_pop", cells
+    end
+    if before.kind == "dynamic_call" and delta == -2 then
+        return "dynamic_call", cells
+    end
+    if before.kind == "call" and delta == -2 then return "call", cells end
+    if before.kind == "return" and delta == 2 then return "return", cells end
+    return delta < 0 and "stack_push" or "stack_pop", cells
+end
+
+-- Update only provenance that was observed while this trace was active.  A
+-- trace armed in the middle of a word may initially show unknown cells; this
+-- is deliberate and safer than inventing calls from arbitrary IX values.
+function C.update_return_provenance(before, after)
+    if not before or not after then return end
+    local delta = after.ix - before.ix
+    if delta == 0 or (delta & 1) ~= 0 then return end
+
+    local provenance = C.g.state.return_provenance
+    if delta < 0 then
+        for address = after.ix, before.ix - 2, 2 do
+            provenance[address & 0xFFFF] = nil
+        end
+    else
+        for address = before.ix, after.ix - 2, 2 do
+            provenance[address & 0xFFFF] = nil
+        end
+    end
+
+    local effect = C.transition_effect(before, after)
+    if effect == "return_data_push" then
+        provenance[after.ix & 0xFFFF] = "return_data"
+    elseif effect == "call" or effect == "dynamic_call" then
+        provenance[after.ix & 0xFFFF] = "call"
+    end
+end
+
 function C.reset_trace()
     local state = C.g.state
     state.total_words = 0
@@ -254,6 +543,14 @@ function C.reset_trace()
     state.word_counts = {}
     state.unknown_counts = {}
     state.call_stack = {}
+    state.loop_stack = {}
+    state.return_data_stack = {}
+    state.unknown_return_stack = {}
+    state.return_provenance = {}
+    state.logged_discoveries = {}
+    state.discovery_records = {}
+    state.discovery_emissions = {}
+    state.repeated_dispatch_states = 0
     state.trace = C.ring(C.g.config.trace_capacity)
     state.last_dispatch = nil
     state.rate_time = C.emulated_time()
@@ -268,37 +565,128 @@ function C.record_error(area, message)
     C.print_info("[GORF MONITOR] " .. area .. ": " .. tostring(message))
 end
 
+function C.discovery_mode(mode)
+    if mode == nil then return C.g.config.discovery_mode or "unknown" end
+    local valid = { unknown = true, all = true, off = true }
+    assert(valid[mode], "discovery mode must be 'unknown', 'all', or 'off'")
+    C.g.config.discovery_mode = mode
+    C.print_info("[GORF MONITOR] discovery console: " .. mode)
+    return mode
+end
+
+function C.record_discovery_decision(event, decoded)
+    if decoded.exact_name then return nil end
+
+    local state = C.g.state
+    local mode = C.g.config.discovery_mode or "unknown"
+    local category = decoded.description and "HYPOTHESIS" or "DISCOVERY"
+    local decision
+    if mode == "off" then
+        decision = "suppressed_filter_off"
+    elseif mode == "unknown" and decoded.description then
+        decision = "suppressed_hypothesis"
+    elseif not event.terse_stream_preview then
+        decision = "suppressed_no_preview"
+    elseif state.logged_discoveries[event.target] then
+        decision = "already_emitted"
+    else
+        decision = "emitted"
+        state.logged_discoveries[event.target] = true
+    end
+
+    local key = mode .. ":" .. C.hex(event.target)
+    local record = state.discovery_records[key]
+    if not record then
+        record = {
+            address = event.target,
+            category = category,
+            mode = mode,
+            decision = decision,
+            first_decision = decision,
+            last_decision = decision,
+            emitted = false,
+            emitted_count = 0,
+            already_emitted_count = 0,
+            suppressed_count = 0,
+            suppressed_hypothesis_count = 0,
+            suppressed_filter_off_count = 0,
+            suppressed_no_preview_count = 0,
+            first_sequence = event.sequence,
+            last_sequence = event.sequence,
+            first_time = event.time,
+            last_time = event.time,
+            first_ip = event.ip,
+            first_context = event.reconstructed_context,
+            preview = event.terse_stream_preview,
+            occurrences = 0
+        }
+        state.discovery_records[key] = record
+        state.discovery_emissions[#state.discovery_emissions + 1] = record
+    end
+    record.occurrences = record.occurrences + 1
+    record.last_sequence = event.sequence
+    record.last_time = event.time
+    record.last_decision = decision
+
+    if decision == "emitted" then
+        record.emitted = true
+        record.emitted_count = record.emitted_count + 1
+    elseif decision == "already_emitted" then
+        record.already_emitted_count = record.already_emitted_count + 1
+    else
+        record.suppressed_count = record.suppressed_count + 1
+        local count_name = decision .. "_count"
+        if record[count_name] ~= nil then
+            record[count_name] = record[count_name] + 1
+        end
+    end
+
+    if decision == "emitted" then
+        print(string.format("[%s] IP: $%04X -> Target: $%04X | %s (Context: %s)",
+            category, event.ip, event.target, event.terse_stream_preview,
+            event.reconstructed_context or "NONE"))
+    end
+    return record
+end
+
 function C.on_dispatch()
     if not C.g.running or not C.g.config.exact_trace then return end
     local ok, message = pcall(function()
         local state = C.g.state
         local pc = C.register_value("PC")
         if pc ~= TERSE_DISPATCH_EXECUTION then return end
-        local ip = (C.register_value("BC") - 2) & 0xFFFF
+        local next_bc = C.register_value("BC")
+        local ip = (next_bc - 2) & 0xFFFF
         local target = C.register_value("HL")
-        local entry_at_ip = nil
-        if ip > 0 and C.u8_direct(ip - 1) == 0xCF then entry_at_ip = ip - 1 end
+        local sp = C.register_value("SP")
+        local ix = C.register_value("IX")
+        local iy = C.register_value("IY")
 
-        if entry_at_ip then
-            local top = state.call_stack[#state.call_stack]
-            if not top or top.address ~= entry_at_ip then
-                if entry_at_ip == 0xBFB0 then state.call_stack = {} end
-                local name = C.g.data.entries[entry_at_ip] or C.g.data.symbols[entry_at_ip]
-                if not name then
-                    name = "UNKNOWN TERSE $" .. C.hex(entry_at_ip)
-                end
-                state.call_stack[#state.call_stack + 1] = {
-                    address = entry_at_ip, name = name, caller_ip = ip
-                }
-            end
-        end
+        -- At the first dispatch inside a colon definition, BC points at the
+        -- first threaded cell and the preceding byte is its _ENTER opcode.
+        if ip > 0 and C.u8_direct(ip - 1) == 0xCF then C.register_entry(ip - 1) end
 
-        local high_level = C.g.data.entries[target] ~= nil or C.u8_direct(target) == 0xCF
+        local high_level = C.u8_direct(target) == 0xCF
+        if high_level then C.register_entry(target) end
         local decoded = C.target_decode(target, high_level)
         local name = decoded.exact_name or decoded.display_name
-
-        local stack_top = C.stack_words(C.register_value("SP"), C.g.data.address.PSP, 5)
-        local current = state.call_stack[#state.call_stack]
+        local return_values, return_depth, return_fingerprint =
+            C.stack_snapshot(ix, C.g.data.address.RSP)
+        local parameter_values, parameter_depth, parameter_fingerprint =
+            C.stack_snapshot(sp, C.g.data.address.PSP)
+        local previous = state.last_dispatch
+        C.update_return_provenance(previous, { ix = ix, repeated_state = false })
+        local call_stack, physical_return_depth, current, loop_stack,
+            return_stack_frames, return_data_stack, unknown_return_stack =
+            C.reconstruct_call_stack(ip, ix, return_values)
+        local stack_top = {}
+        for index = 1, math.min(5, #parameter_values) do
+            stack_top[index] = parameter_values[index]
+        end
+        local return_stack_top = {}
+        for index = 1, math.min(8, #return_values) do
+            return_stack_top[index] = return_values[index]
+        end
         local event = {
             sequence = state.total_words + 1,
             time = C.emulated_time(),
@@ -309,18 +697,58 @@ function C.on_dispatch()
             decoded_source = decoded.exact_source,
             target_class = decoded.class,
             decoded_description = decoded.description,
+            description_source = decoded.description_source,
             nearest_symbol = decoded.nearest_symbol,
             terse_stream_preview = decoded.terse_stream_preview,
             detail = C.inline_detail(ip, target),
             reconstructed_context = current and current.name or nil,
             reconstructed_context_address = current and current.address or nil,
             reconstructed_stream_offset = current and ((ip - current.address) & 0xFFFF) or nil,
-            reconstructed_call_depth = #state.call_stack,
-            sp = C.register_value("SP"),
-            ix = C.register_value("IX"),
+            reconstructed_call_depth = #call_stack,
+            reconstructed_loop_depth = #loop_stack,
+            reconstructed_return_data_depth = #return_data_stack,
+            reconstructed_unknown_return_depth = #unknown_return_stack,
+            reconstructed_physical_return_depth = physical_return_depth,
+            reconstructed_parameter_depth = parameter_depth,
+            sp = sp,
+            ix = ix,
+            iy = iy,
+            next_bc = next_bc,
+            dispatcher_pc = pc,
+            dispatcher = {
+                pc = pc, ip = ip, next_bc = next_bc, target = target,
+                sp = sp, ix = ix, iy = iy,
+                parameter_depth = parameter_depth,
+                return_depth = physical_return_depth,
+                call_depth = #call_stack,
+                loop_depth = #loop_stack,
+                return_data_depth = #return_data_stack,
+                unknown_return_depth = #unknown_return_stack
+            },
+            call_stack = call_stack,
+            loop_stack = loop_stack,
+            return_data_stack = return_data_stack,
+            unknown_return_stack = unknown_return_stack,
+            return_stack_frames = return_stack_frames,
+            return_stack_top = return_stack_top,
+            return_stack_fingerprint = return_fingerprint,
+            parameter_stack_fingerprint = parameter_fingerprint,
             stack = stack_top,
-            kind = high_level and "call" or (target == 0x0061 and "return" or "word")
+            kind = C.dispatch_kind(target, high_level)
         }
+
+        if C.same_dispatch(previous, event) then
+            event.repeated_state = true
+            event.repeated_of_sequence = previous.sequence
+            state.repeated_dispatch_states = (state.repeated_dispatch_states or 0) + 1
+        else
+            event.repeated_state = false
+        end
+
+        if previous then
+            previous.control_effect, previous.control_cells = C.transition_effect(previous, event)
+            previous.next_sequence = event.sequence
+        end
 
         state.total_words = event.sequence
         state.dispatch_since_frame = state.dispatch_since_frame + 1
@@ -328,32 +756,14 @@ function C.on_dispatch()
         if not decoded.exact_name then
             state.unknown_counts[target] = (state.unknown_counts[target] or 0) + 1
         end
+        state.call_stack = call_stack
+        state.loop_stack = loop_stack
+        state.return_data_stack = return_data_stack
+        state.unknown_return_stack = unknown_return_stack
         state.last_dispatch = event
         C.ring_push(state.trace, event)
 
-        -- print to the terminal if the target is completely unmapped
-        if not decoded.exact_name and event.terse_stream_preview then
-
-            -- Check if we have already printed this specific target address before
-            if not G_logged_discoveries[event.target] then
-                -- Mark it as logged
-                G_logged_discoveries[event.target] = true            
-                -- Streams out directly to terminal console window
-                print(string.format("[DISCOVERY] IP: $%04X -> Target: $%04X | %s (Context: %s)", 
-                    event.ip, event.target, event.terse_stream_preview, event.reconstructed_context or "NONE"))
-                    
-                -- Sends it to MAME's internal error/debug log utility
-                -- manager.machine:logerror(string.format("GORF_TRACK: $%04X -> $%04X\n", event.ip, event.target))
-            end
-        end        
-
-        if high_level then
-            state.call_stack[#state.call_stack + 1] = {
-                address = target, name = name, caller_ip = ip + 2
-            }
-        elseif target == 0x0061 and #state.call_stack > 0 then
-            table.remove(state.call_stack)
-        end
+        C.record_discovery_decision(event, decoded)
     end)
     if not ok then C.record_error("dispatcher tap", message) end
 end
@@ -559,10 +969,22 @@ function C.refresh()
             total_words = state.total_words, frame_words = state.frame_words,
             word_rate = state.word_rate, last = state.last_dispatch,
             reconstructed_call_stack = state.call_stack,
-            reconstructed_parameter_depth = regs.sp <= C.g.data.address.PSP
-                and (C.g.data.address.PSP - regs.sp) // 2 or 0,
-            reconstructed_return_cells = regs.ix <= C.g.data.address.RSP
-                and (C.g.data.address.RSP - regs.ix) // 2 or 0
+            reconstructed_loop_stack = state.loop_stack,
+            reconstructed_return_data_stack = state.return_data_stack,
+            reconstructed_unknown_return_stack = state.unknown_return_stack,
+            reconstructed_parameter_depth = state.last_dispatch
+                and state.last_dispatch.reconstructed_parameter_depth or 0,
+            reconstructed_return_cells = state.last_dispatch
+                and state.last_dispatch.reconstructed_physical_return_depth or 0,
+            reconstructed_call_depth = state.last_dispatch
+                and state.last_dispatch.reconstructed_call_depth or 0,
+            reconstructed_loop_depth = state.last_dispatch
+                and state.last_dispatch.reconstructed_loop_depth or 0,
+            reconstructed_return_data_depth = state.last_dispatch
+                and state.last_dispatch.reconstructed_return_data_depth or 0,
+            reconstructed_unknown_return_depth = state.last_dispatch
+                and state.last_dispatch.reconstructed_unknown_return_depth or 0,
+            dispatcher = state.last_dispatch and state.last_dispatch.dispatcher or nil
         }
     }
     return state.snapshot
@@ -672,6 +1094,26 @@ function C.rebuild_symbol_order()
     C.g.runtime.symbol_order = order
 end
 
+local function append_unique(list, value)
+    for _, existing in ipairs(list) do
+        if existing == value then return false end
+    end
+    list[#list + 1] = value
+    return true
+end
+
+local function choose_lst_label(address, aliases, definitions)
+    local defined = definitions[address]
+    if defined and #defined > 0 then return defined[1] end
+    local builtin = C.g.data.symbols[address] or C.g.data.entries[address]
+    if builtin then
+        for _, label in ipairs(aliases) do
+            if label == builtin then return label end
+        end
+    end
+    return aliases[1]
+end
+
 function C.refresh_symbol_decodes()
     for _, event in pairs(C.g.state.trace.items) do
         local high_level = event.target_class == "TERSE WORD" or C.u8_direct(event.target) == 0xCF
@@ -681,17 +1123,25 @@ function C.refresh_symbol_decodes()
         event.decoded_source = decoded.exact_source
         event.target_class = decoded.class
         event.decoded_description = decoded.description
+        event.description_source = decoded.description_source
         event.nearest_symbol = decoded.nearest_symbol
+        event.terse_stream_preview = decoded.terse_stream_preview
+        if event.reconstructed_context_address then
+            event.reconstructed_context = C.exact_symbol(event.reconstructed_context_address)
+                or ("TERSE_$" .. C.hex(event.reconstructed_context_address))
+        end
     end
     for _, frame in ipairs(C.g.state.call_stack) do
-        local exact = C.g.data.entries[frame.address] or C.g.data.symbols[frame.address]
-            or C.g.runtime.lst_symbols[frame.address]
+        local exact = frame.address and C.exact_symbol(frame.address) or nil
         if exact then frame.name = exact end
+    end
+    for _, frame in ipairs(C.g.state.loop_stack or {}) do
+        local exact = frame.context_address and C.exact_symbol(frame.context_address) or nil
+        if exact then frame.context_name = exact end
     end
     local unknown = {}
     for address, count in pairs(C.g.state.word_counts) do
-        if not (C.g.data.entries[address] or C.g.data.symbols[address]
-            or C.g.runtime.lst_symbols[address]) then
+        if not C.exact_symbol(address) then
             unknown[address] = count
         end
     end
@@ -703,55 +1153,150 @@ function C.load_lst(path)
     assert(type(path) == "string" and path ~= "", "LST path is required")
     local file, message = io.open(path, "r")
     assert(file, message)
-    local imported, duplicates, conflicts = 0, 0, 0
+    local aliases, definitions = {}, {}
+    local in_symbol_table = false
+
+    local function record_label(address_text, label, definition)
+        if not address_text or not label or #address_text > 4 then return end
+        local address = tonumber(address_text, 16)
+        if not address then return end
+        aliases[address] = aliases[address] or {}
+        append_unique(aliases[address], label)
+        if definition then
+            definitions[address] = definitions[address] or {}
+            append_unique(definitions[address], label)
+        end
+    end
+
     for source_line in file:lines() do
+        if source_line:lower():find("symbol table:", 1, true) then
+            in_symbol_table = true
+        end
+
+        -- zmac listing layouts vary by release.  Newer versions delimit the
+        -- address/byte and source fields with tabs; older versions use spaces.
         local address_text, label = source_line:match(
-            "\t([%x][%x][%x][%x])%s+[%x]+%s+([%a_.$?@][%w_.$?@]*):")
+            "\t([%x]+)[^\t]*\t%s*([%a_.$?@][%w_.$?@]*):")
         if not address_text then
             address_text, label = source_line:match(
-                "\t([%x][%x][%x][%x])%s+([%a_.$?@][%w_.$?@]*)%s+EQU")
+                "\t([%x]+)%s+[%x]+%s+([%a_.$?@][%w_.$?@]*):")
         end
-        if address_text and label then
-            local address = tonumber(address_text, 16)
-            local builtin = C.g.data.entries[address] or C.g.data.symbols[address]
-            local existing = C.g.runtime.lst_symbols[address]
-            if builtin then
-                if builtin == label then duplicates = duplicates + 1 else conflicts = conflicts + 1 end
-            elseif existing then
-                if existing == label then duplicates = duplicates + 1 else conflicts = conflicts + 1 end
-            else
-                C.g.runtime.lst_symbols[address] = label
-                imported = imported + 1
+        if not address_text then
+            address_text, label = source_line:match(
+                "\t([%x]+)%s+([%a_.$?@][%w_.$?@]*):")
+        end
+        record_label(address_text, label, true)
+
+        -- EQU labels are exact source symbols, but not code/data definitions.
+        -- Keeping them out of definitions lets a real program label win when
+        -- a hardware constant shares the same numeric address.
+        local equ_address, equ_label = source_line:match(
+            "\t([%x]+)[^\t]*\t%s*([%a_.$?@][%w_.$?@]*)%s+EQU")
+        if not equ_address then
+            equ_address, equ_label = source_line:match(
+                "\t([%x]+)%s+([%a_.$?@][%w_.$?@]*)%s+EQU")
+        end
+        record_label(equ_address, equ_label, false)
+
+        if in_symbol_table then
+            label, address_text = source_line:match(
+                "^%s*([%a_.$?@][%w_.$?@]*)%s+=%s*([%x]+)%s+%d+%s*$")
+            if not label then
+                label, address_text = source_line:match(
+                    "^%s*([%a_.$?@][%w_.$?@]*)%s+([%x]+)%s+%d+%s*$")
             end
+            record_label(address_text, label, false)
         end
     end
     file:close()
+
+    local loaded, alias_count, confirmed, superseded = 0, 0, 0, 0
+    local selected = {}
+    for address, names in pairs(aliases) do
+        selected[address] = choose_lst_label(address, names, definitions)
+        loaded = loaded + 1
+        alias_count = alias_count + #names
+        local builtin = C.g.data.symbols[address] or C.g.data.entries[address]
+        if builtin then
+            if builtin == selected[address] then confirmed = confirmed + 1
+            else superseded = superseded + 1 end
+        end
+    end
+    if loaded == 0 then
+        C.print_info("[GORF MONITOR] LST: no recognizable labels; previous symbols retained")
+        return {
+            loaded = 0, aliases = 0, confirmed = 0, superseded = 0,
+            retained = true
+        }
+    end
+
+    C.g.runtime.lst_symbols = selected
+    C.g.runtime.lst_aliases = aliases
     C.rebuild_symbol_order()
     C.refresh_symbol_decodes()
     C.print_info(string.format(
-        "[GORF MONITOR] LST symbols: %d imported, %d already known, %d conflicts kept existing",
-        imported, duplicates, conflicts))
-    return { imported = imported, duplicates = duplicates, conflicts = conflicts }
+        "[GORF MONITOR] LST: %d addresses, %d labels; %d ASM names confirmed, %d superseded",
+        loaded, alias_count, confirmed, superseded))
+    return {
+        loaded = loaded, aliases = alias_count,
+        confirmed = confirmed, superseded = superseded
+    }
+end
+
+local function return_frames_text(frames)
+    local values = {}
+    for _, frame in ipairs(frames or {}) do
+        if frame.frame_type == "call" then
+            values[#values + 1] = string.format("CALL:%s@%04X[%s]",
+                frame.name or "UNRESOLVED", frame.return_address or 0,
+                frame.call_kind or "unknown")
+        elseif frame.frame_type == "loop" then
+            values[#values + 1] = string.format("LOOP:%04X/%04X@%04X",
+                frame.index or 0, frame.limit or 0, frame.loop_start or 0)
+        elseif frame.frame_type == "return_data" then
+            values[#values + 1] = string.format("DATA:%04X", frame.value or 0)
+        else
+            values[#values + 1] = string.format("UNKNOWN:%04X", frame.value or 0)
+        end
+    end
+    return table.concat(values, " ")
 end
 
 function C.save_trace(path, count)
     assert(type(path) == "string" and path ~= "", "trace path is required")
     local file, message = io.open(path, "w")
     assert(file, message)
-    file:write("sequence,time,stream_address,target,decoded_name,decoded_source,target_class,decoded_description,nearest_symbol,reconstructed_context,reconstructed_context_address,reconstructed_stream_offset,detail,sp,ix,reconstructed_call_depth,stack\n")
+    file:write("sequence,time,stream_address,next_bc,target,decoded_name,decoded_source,target_class,kind,repeated_state,repeated_of_sequence,return_stack_fingerprint,parameter_stack_fingerprint,control_effect,control_cells,decoded_description,nearest_symbol,reconstructed_context,reconstructed_context_address,reconstructed_stream_offset,detail,sp,ix,iy,reconstructed_parameter_depth,reconstructed_physical_return_depth,reconstructed_call_depth,reconstructed_loop_depth,reconstructed_return_data_depth,reconstructed_unknown_return_depth,parameter_stack_top,return_stack_top,loop_frames,return_stack_frames\n")
     local rows = C.ring_recent(C.g.state.trace, count or C.g.state.trace.count)
     for index = #rows, 1, -1 do
         local event = rows[index]
         local stack = {}
         for _, value in ipairs(event.stack) do stack[#stack + 1] = C.hex(value) end
+        local return_stack = {}
+        for _, value in ipairs(event.return_stack_top or {}) do
+            return_stack[#return_stack + 1] = C.hex(value)
+        end
+        local loops = {}
+        for _, frame in ipairs(event.loop_stack or {}) do
+            loops[#loops + 1] = string.format("%04X/%04X@$%04X",
+                frame.index, frame.limit, frame.loop_start)
+        end
         file:write(table.concat({
             event.sequence,
             string.format("%.6f", event.time),
             C.hex(event.ip),
+            C.hex(event.next_bc),
             C.hex(event.target),
             C.csv_field(event.decoded_name),
             C.csv_field(event.decoded_source),
             C.csv_field(event.target_class),
+            C.csv_field(event.kind),
+            event.repeated_state and "true" or "false",
+            event.repeated_of_sequence or "",
+            string.format("%08X", event.return_stack_fingerprint or 0),
+            string.format("%08X", event.parameter_stack_fingerprint or 0),
+            C.csv_field(event.control_effect),
+            event.control_cells or "",
             C.csv_field(event.decoded_description),
             C.csv_field(event.nearest_symbol),
             C.csv_field(event.reconstructed_context),
@@ -760,12 +1305,76 @@ function C.save_trace(path, count)
             C.csv_field(event.detail),
             C.hex(event.sp),
             C.hex(event.ix),
+            C.hex(event.iy),
+            event.reconstructed_parameter_depth,
+            event.reconstructed_physical_return_depth,
             event.reconstructed_call_depth,
-            C.csv_field(table.concat(stack, " "))
+            event.reconstructed_loop_depth,
+            event.reconstructed_return_data_depth,
+            event.reconstructed_unknown_return_depth,
+            C.csv_field(table.concat(stack, " ")),
+            C.csv_field(table.concat(return_stack, " ")),
+            C.csv_field(table.concat(loops, " ")),
+            C.csv_field(return_frames_text(event.return_stack_frames))
         }, ","), "\n")
     end
     file:close()
     C.print_info(string.format("[GORF MONITOR] wrote %d trace rows to %s", #rows, path))
+    return #rows
+end
+
+function C.save_discovery_emissions(path)
+    assert(type(path) == "string" and path ~= "", "discovery emissions path is required")
+    local file, message = io.open(path, "w")
+    assert(file, message)
+    file:write(table.concat({
+        "address", "category", "discovery_mode", "first_decision",
+        "last_decision", "emitted", "emitted_count", "already_emitted_count",
+        "suppressed_count", "suppressed_hypothesis_count",
+        "suppressed_filter_off_count", "suppressed_no_preview_count",
+        "occurrences", "first_sequence", "last_sequence", "first_time",
+        "last_time", "first_ip", "first_context", "preview"
+    }, ","), "\n")
+
+    local rows = {}
+    for _, record in ipairs(C.g.state.discovery_emissions or {}) do
+        rows[#rows + 1] = record
+    end
+    table.sort(rows, function(left, right)
+        if left.first_sequence == right.first_sequence then
+            if left.address == right.address then return left.mode < right.mode end
+            return left.address < right.address
+        end
+        return left.first_sequence < right.first_sequence
+    end)
+
+    for _, record in ipairs(rows) do
+        file:write(table.concat({
+            C.hex(record.address),
+            C.csv_field(record.category),
+            C.csv_field(record.mode),
+            C.csv_field(record.first_decision),
+            C.csv_field(record.last_decision),
+            record.emitted and "true" or "false",
+            record.emitted_count,
+            record.already_emitted_count,
+            record.suppressed_count,
+            record.suppressed_hypothesis_count,
+            record.suppressed_filter_off_count,
+            record.suppressed_no_preview_count,
+            record.occurrences,
+            record.first_sequence,
+            record.last_sequence,
+            string.format("%.6f", record.first_time),
+            string.format("%.6f", record.last_time),
+            C.hex(record.first_ip),
+            C.csv_field(record.first_context),
+            C.csv_field(record.preview)
+        }, ","), "\n")
+    end
+    file:close()
+    C.print_info(string.format(
+        "[GORF MONITOR] wrote %d discovery audit rows to %s", #rows, path))
     return #rows
 end
 
@@ -804,7 +1413,8 @@ function C.attach(gorf)
 
     gorf.runtime = {
         machine = machine, cpu = cpu, program = program, io = io,
-        taps = {}, subscriptions = {}, registers = {}, symbol_order = {}, lst_symbols = {}
+        taps = {}, subscriptions = {}, registers = {}, symbol_order = {}, entry_order = {},
+        lst_symbols = {}, lst_aliases = {}, dynamic_entries = {}
     }
     gorf.runtime.registers = {
         PC = C.find_state(cpu, { "CURPC", "PC", "pc" }),
@@ -845,11 +1455,16 @@ function C.attach(gorf)
         return gorf.runtime.read_direct_u8(address)
     end
     C.rebuild_symbol_order()
+    C.rebuild_entry_order()
 
     gorf.state = {
         warnings = {}, reported_errors = {}, total_words = 0, dispatch_since_frame = 0,
         frame_words = 0, word_rate = 0, word_counts = {}, unknown_counts = {},
-        call_stack = {}, trace = C.ring(gorf.config.trace_capacity),
+        logged_discoveries = {}, discovery_records = {}, discovery_emissions = {},
+        repeated_dispatch_states = 0,
+        call_stack = {}, loop_stack = {}, return_data_stack = {},
+        unknown_return_stack = {}, return_provenance = {},
+        trace = C.ring(gorf.config.trace_capacity),
         hardware_events = C.ring(gorf.config.hardware_capacity), last_dispatch = nil,
         audio_events = C.ring(gorf.config.hardware_capacity),
         sound = {
@@ -906,7 +1521,11 @@ function C.attach(gorf)
     end
     gorf.save_trace = function(path, count) return C.save_trace(path, count) end
     gorf.save_discovery = function(path) return C.save_discovery(path) end
+    gorf.save_discovery_emissions = function(path)
+        return C.save_discovery_emissions(path)
+    end
     gorf.load_lst = function(path) return C.load_lst(path) end
+    gorf.discovery = function(mode) return C.discovery_mode(mode) end
     gorf.stop_core = function() C.remove_runtime_hooks() end
 
     return gorf

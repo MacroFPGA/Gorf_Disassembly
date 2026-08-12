@@ -5,8 +5,9 @@ local directory = source:match("^@(.+[\\/])[^\\/]+$") or "./"
 local separator = directory:find("\\", 1, true) and "\\" or "/"
 local default_lst = directory .. ".." .. separator .. ".." .. separator
     .. "src" .. separator .. "zout" .. separator .. "Gorf_Disassembly.lst"
-local version = "2.0.0"
-local revision = "2.0.0-20260803"
+local default_test_runner = directory .. "gorf_monitor_test.lua"
+local version = "2.3.1"
+local revision = "2.3.1-20260812"
 local module_api = 1
 
 local modules = {
@@ -54,11 +55,13 @@ local G = {
     source = source:gsub("^@", ""),
     config = {
         exact_trace = true,
-        trace_capacity = 512,
+        discovery_mode = "unknown",
+        trace_capacity = 32768,
         hardware_capacity = 256,
         phoneme_capacity = 128,
         utterance_capacity = 32,
         visible = true,
+        hud_frozen = false,
         page = "all",
         font_scale = 1,
         hud_refresh_hz = 5,
@@ -82,6 +85,7 @@ hud.attach(G)
 local shortcut_pages = {
     gti = "important",
     gtt = "terse",
+    gmt = "terse",
     gtg = "game",
     gtau = "audio",
     gtv = "video",
@@ -122,6 +126,56 @@ do
     rawset(_G, "gtp", handler)
 end
 
+G.version_info = function()
+    local runner = rawget(_G, "GorfMonitorTest")
+    local runner_version = "not loaded"
+    if runner then
+        runner_version = "v" .. tostring(runner.version or "unknown")
+            .. ", build " .. tostring(runner.revision or "unknown")
+    end
+    local text = table.concat({
+        "GORF MONITOR VERSIONS",
+        "monitor: v" .. G.version .. ", build " .. G.revision,
+        "data: " .. tostring(G.module_revisions.data),
+        "core: " .. tostring(G.module_revisions.core),
+        "HUD: " .. tostring(G.module_revisions.hud),
+        "test runner: " .. runner_version
+    }, "\n")
+    core.print_info(text)
+    return text
+end
+
+G.load_test = function(path)
+    local selected_path = path or default_test_runner
+    local ok, result = pcall(dofile, selected_path)
+    if not ok then
+        error(string.format("cannot load Gorf monitor test runner %s: %s",
+            selected_path, tostring(result)), 2)
+    end
+    G.version_info()
+    return result
+end
+do
+    local previous = rawget(_G, "gmts")
+    local handler = function(path) return G.load_test(path) end
+    G.shortcuts.gmts = {
+        handler = handler,
+        previous = previous,
+        restore = previous ~= nil
+    }
+    rawset(_G, "gmts", handler)
+end
+do
+    local previous = rawget(_G, "gtversion")
+    local handler = function() return G.version_info() end
+    G.shortcuts.gtversion = {
+        handler = handler,
+        previous = previous,
+        restore = previous ~= nil
+    }
+    rawset(_G, "gtversion", handler)
+end
+
 G.stop = function()
     if not G.running then return "already stopped" end
     G.running = false
@@ -142,13 +196,17 @@ G.help = function()
         "HUD views:",
         "  gti()   important",
         "  gtt()   TERSE",
+        "  gmt()   TERSE (legacy shortcut)",
         "  gtg()   game",
         "  gtau()  audio",
         "  gtv()   video",
         "  gta()   all",
         "  gtp()   next view",
-        "  gtl()   load src/zout/Gorf_Disassembly.lst",
-        "  gtl(\"path\") load another LST",
+        "  gtl()   refresh exact symbols from src/zout/Gorf_Disassembly.lst",
+        "  gtl(\"path\") refresh exact symbols from another LST",
+        "  gmts()  load gorf_monitor_test.lua",
+        "  gmts(\"path\") load another guided test runner",
+        "  gtversion() show monitor and module versions",
         "",
         "Full commands:",
         "GorfMonitor.show_important()",
@@ -162,6 +220,7 @@ G.help = function()
         "GorfMonitor.font_scale(1|2|3|4)",
         "GorfMonitor.refresh_rate(1..30)",
         "GorfMonitor.visible(true|false)",
+        "GorfMonitor.freeze(true|false)",
         "GorfMonitor.auto_place(true|false)",
         "GorfMonitor.set_region(x0,y0,x1,y1)",
         "GorfMonitor.dump([count])",
@@ -169,7 +228,11 @@ G.help = function()
         "GorfMonitor.unknown([count])",
         "GorfMonitor.save_trace(path[, count])",
         "GorfMonitor.save_discovery(path)",
+        "GorfMonitor.save_discovery_emissions(path)",
         "GorfMonitor.load_lst(path)",
+        "GorfMonitor.load_test([path])",
+        "GorfMonitor.version_info()",
+        "GorfMonitor.discovery(\"unknown\"|\"all\"|\"off\")",
         "GorfMonitor.reset_trace()",
         "GorfMonitor.status()",
         "GorfMonitor.stop()"
@@ -182,6 +245,7 @@ G.status = function()
     local callback = G.hud and G.hud.callback_style or "none"
     local draws = G.hud and G.hud.draw_count or 0
     local last_error = G.hud and G.hud.last_error or "none"
+    local terse = G.get_snapshot().terse
     local text = table.concat({
         "GORF MONITOR " .. G.revision,
         "source: " .. G.source,
@@ -189,6 +253,13 @@ G.status = function()
             .. ", core " .. tostring(G.module_revisions.core)
             .. ", HUD " .. tostring(G.module_revisions.hud),
         "page: " .. G.config.page,
+        "HUD frozen: " .. tostring(G.config.hud_frozen),
+        "discovery console: " .. G.config.discovery_mode,
+        string.format("IX frames: calls %d, loops %d, data %d, unknown %d",
+            terse.reconstructed_call_depth,
+            terse.reconstructed_loop_depth,
+            terse.reconstructed_return_data_depth,
+            terse.reconstructed_unknown_return_depth),
         "HUD callback: " .. callback,
         "HUD draws: " .. tostring(draws),
         "HUD error: " .. tostring(last_error)
@@ -200,20 +271,23 @@ end
 _G.GorfMonitor = G
 core.print_info("[GORF MONITOR] v" .. G.version .. " loaded; HUD: ALL; build " .. G.revision)
 core.print_info("[GORF MONITOR] source: " .. G.source)
+G.version_info()
 core.print_info(table.concat({
     "[GORF MONITOR] HUD views:",
     "  gti()   important",
     "  gtt()   TERSE",
+    "  gmt()   TERSE (legacy shortcut)",
     "  gtg()   game",
     "  gtau()  audio",
     "  gtv()   video",
     "  gta()   all",
     "  gtp()   next view",
-    "  gtl()   load src/zout/Gorf_Disassembly.lst",
-    "  gtl(\"path\") load another LST",
+    "  gtl()   refresh exact symbols from src/zout/Gorf_Disassembly.lst",
+    "  gtl(\"path\") refresh exact symbols from another LST",
+    "  gmts()  load gorf_monitor_test.lua",
+    "  gtversion() show monitor and module versions",
     "[GORF MONITOR] other commands:",
     "  GorfMonitor.help()"
 }, "\n"))
 
 return "GORF monitor loaded"
-

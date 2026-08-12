@@ -3,7 +3,7 @@
 local H = {}
 H.module_name = "hud"
 H.api_version = 1
-H.revision = "2.0.0-20260802.6f2d"
+H.revision = "2.3.0-20260812"
 
 H.colors = {
     panel = 0xFF05070A,
@@ -124,44 +124,32 @@ local function trace_text(event)
     if not event then return "--" end
     local detail = event.detail and (" " .. event.detail) or ""
     return string.format("%04X>%04X %s%s", event.ip, event.target,
-        event.decoded_name or "UNKNOWN", detail)
+        event.name or "UNRESOLVED", detail)
 end
 
 local function trace_decode_text(event)
-    -- 1. Tightened safety guard check
-    if not event or type(event) ~= "table" then 
-        return "--" 
-    end
-
-    -- Base information strings
-    local name_str = event.decoded_name or (event.target_class == "TERSE WORD" and "UNKNOWN TERSE" or "UNKNOWN NATIVE")
+    if not event or type(event) ~= "table" then return "--" end
+    local name_str = event.decoded_name or event.name or "UNRESOLVED"
     local preview_str = event.terse_stream_preview or ""
-
-    -- 2. Added explicit nil check for event.target_class to protect string.format
-    if event.decoded_name and event.target_class then
-        -- Restored standard brackets around target_class to match layout styling
-        return string.format("%s %s [%s]", preview_str, name_str, event.target_class)
+    if event.decoded_name then
+        return string.format("%s %s [%s]", preview_str, name_str,
+            event.decoded_source or event.target_class or "EXACT")
     end
-
-    -- If it's an unmapped or relative trace line, print the dump so you can map it!
-    if event.terse_stream_preview then
-        return "RECON " .. event.terse_stream_preview
-    end
-
-    if event.decoded_description then 
-        return "DECODED " .. event.decoded_description 
-    end
-
     local nearest = event.nearest_symbol and ("; NEAR " .. event.nearest_symbol) or ""
-    return name_str .. nearest
+    return string.format("%s %s%s", preview_str, name_str, nearest)
 end
 
+local function trace_annotation_text(event)
+    if not event or not event.decoded_description then return nil end
+    local prefix = event.description_source == "UNVERIFIED" and "HYP " or "NOTE "
+    return prefix .. event.decoded_description
+end
 
 local function trace_context_text(event)
     if not event or not event.reconstructed_context then return "RECON CONTEXT --" end
     local offset = event.reconstructed_stream_offset and
         (" +$" .. hex(event.reconstructed_stream_offset, 2)) or ""
-    return string.format("RECON %s%s", event.reconstructed_context, offset)
+    return string.format("CTX %s%s", event.reconstructed_context, offset)
 end
 
 local function line(lines, text, color, swatch)
@@ -264,13 +252,16 @@ function H.layout_important(snapshot)
     line(lines, string.format("OBSERVED %d  %.0f W/S", terse.total_words, terse.word_rate), H.colors.active)
     line(lines, "WORD " .. (last and (raw16(last.target) .. " " .. last.name) or "--"), H.colors.value)
     line(lines, "ARG " .. (last and last.detail or "--"), H.colors.dim)
-    line(lines, "RECON CTX " .. (last and last.reconstructed_context or "--"), H.colors.dim)
+    if last and trace_annotation_text(last) then
+        line(lines, trace_annotation_text(last), H.colors.warning)
+    end
+    line(lines, "CTX " .. (last and last.reconstructed_context or "--"), H.colors.dim)
     return lines
 end
 
 function H.layout_all(snapshot)
     local lines = {}
-    local terse, regs = snapshot.terse, snapshot.registers
+    local terse = snapshot.terse
     local game, speech = snapshot.game, snapshot.speech
     local last = terse.last
     section(lines, "GAME")
@@ -295,13 +286,20 @@ function H.layout_all(snapshot)
     line(lines, string.format("OBSERVED %d  %.0f W/S", terse.total_words, terse.word_rate), H.colors.active)
     line(lines, string.format("LAST STREAM %s TARGET %s",
         last and raw16(last.ip) or "----", last and raw16(last.target) or "----"), H.colors.value)
-    line(lines, string.format("NEXT BC %s CPU PC %s", raw16(regs.bc), raw16(regs.pc)), H.colors.dim)
+    line(lines, string.format("NEXT BC %s DISPATCH PC %s",
+        last and raw16(last.next_bc) or "----",
+        last and raw16(last.dispatcher_pc) or "----"), H.colors.dim)
     line(lines, "WORD " .. (last and (raw16(last.target) .. " " .. last.name) or "--"))
     line(lines, "ARG " .. (last and last.detail or "--"), H.colors.dim)
-    line(lines, "RECON CTX " .. (last and last.reconstructed_context or "--"), H.colors.value)
-    line(lines, string.format("RECON PS %d RS %d CALL %d",
+    if last and trace_annotation_text(last) then
+        line(lines, trace_annotation_text(last), H.colors.warning)
+    end
+    line(lines, "CTX " .. (last and last.reconstructed_context or "--"), H.colors.value)
+    line(lines, string.format("PS %d IX %d C %d L %d D %d ? %d",
         terse.reconstructed_parameter_depth, terse.reconstructed_return_cells,
-        #terse.reconstructed_call_stack), H.colors.dim)
+        terse.reconstructed_call_depth, terse.reconstructed_loop_depth,
+        terse.reconstructed_return_data_depth,
+        terse.reconstructed_unknown_return_depth), H.colors.dim)
     line(lines, "RECENT OBSERVED", H.colors.heading)
     local recent = H.gorf.recent(10)
     for index = 1, 10 do
@@ -313,34 +311,55 @@ end
 
 function H.layout_terse(snapshot)
     local lines = {}
-    local terse, regs = snapshot.terse, snapshot.registers
+    local terse = snapshot.terse
     local last = terse.last
     line(lines, string.format("OBSERVED %d WORDS", terse.total_words), H.colors.active)
     line(lines, string.format("RATE %.0f W/S  LAST FRAME %d", terse.word_rate, terse.frame_words), H.colors.value)
 
     section(lines, "DISPATCH")
     line(lines, "LAST STREAM " .. (last and raw16(last.ip) or "----"), H.colors.value)
-    line(lines, "NEXT BC " .. raw16(regs.bc), H.colors.dim)
-    line(lines, "CPU PC " .. raw16(regs.pc))
+    line(lines, "NEXT BC " .. (last and raw16(last.next_bc) or "----"), H.colors.dim)
+    line(lines, "DISPATCH PC " .. (last and raw16(last.dispatcher_pc) or "----"))
     line(lines, "TARGET " .. (last and raw16(last.target) or "--"), H.colors.value)
     line(lines, "WORD " .. (last and last.name or "--"))
     line(lines, "TARGET CLASS " .. (last and last.target_class or "--"), H.colors.dim)
     line(lines, "DECODE " .. (last and trace_decode_text(last) or "--"), H.colors.dim)
+    if last and trace_annotation_text(last) then
+        line(lines, trace_annotation_text(last), H.colors.warning)
+    end
     line(lines, "ARG " .. (last and last.detail or "--"),
         last and last.detail and H.colors.warning or H.colors.dim)
 
-    section(lines, "RECONSTRUCTED TERSE")
-    line(lines, string.format("SP $%04X DEPTH %d", regs.sp, terse.reconstructed_parameter_depth), H.colors.value)
+    section(lines, "TERSE STACK AT DISPATCH")
+    line(lines, string.format("SP %s DEPTH %d", last and raw16(last.sp) or "----",
+        terse.reconstructed_parameter_depth), H.colors.value)
     line(lines, "TOP " .. (last and join_hex(last.stack, 4) or "--"), H.colors.dim)
-    line(lines, string.format("IX $%04X CELLS %d", regs.ix, terse.reconstructed_return_cells), H.colors.value)
-    line(lines, string.format("IY $%04X DISPATCH", regs.iy), H.colors.dim)
+    line(lines, string.format("IX %s CELLS %d", last and raw16(last.ix) or "----",
+        terse.reconstructed_return_cells), H.colors.value)
+    line(lines, "IY " .. (last and raw16(last.iy) or "----"), H.colors.dim)
     line(lines, "CONTEXT " .. (last and last.reconstructed_context or "--"), H.colors.dim)
-    line(lines, "CALLS " .. tostring(#terse.reconstructed_call_stack))
-    for slot = 1, 4 do
-        local frame = terse.reconstructed_call_stack[#terse.reconstructed_call_stack - slot + 1]
-        line(lines, frame and (string.rep(" ", slot - 1) .. frame.name) or "--",
+    line(lines, string.format("TYPED C %d L %d D %d ? %d",
+        terse.reconstructed_call_depth, terse.reconstructed_loop_depth,
+        terse.reconstructed_return_data_depth,
+        terse.reconstructed_unknown_return_depth))
+    for slot = 1, 3 do
+        local frame = terse.reconstructed_call_stack[slot]
+        line(lines, frame and string.format("C%d %s RET %s", slot, frame.name,
+            raw16(frame.return_address)) or "--",
             frame and H.colors.value or H.colors.dim)
     end
+    local loop = terse.reconstructed_loop_stack[1]
+    line(lines, loop and string.format("L1 I %s/%s AT %s",
+        raw16(loop.index), raw16(loop.limit), raw16(loop.loop_start)) or "L --",
+        loop and H.colors.warning or H.colors.dim)
+    local return_data = terse.reconstructed_return_data_stack[1]
+    line(lines, return_data and string.format("D1 VALUE %s",
+        raw16(return_data.value)) or "D --",
+        return_data and H.colors.warning or H.colors.dim)
+    local unknown = terse.reconstructed_unknown_return_stack[1]
+    line(lines, unknown and string.format("?1 VALUE %s",
+        raw16(unknown.value)) or "? --",
+        unknown and H.colors.error or H.colors.dim)
 
     section(lines, "RECENT DISPATCHES")
     local recent = H.gorf.recent(10)
@@ -669,25 +688,29 @@ end
 function H.draw()
     if not H.gorf.running or not H.gorf.config.visible then return end
     local ok, message = pcall(function()
-        local snapshot = H.gorf.refresh()
         local render = H.gorf.runtime.machine.render
         local container = render.ui_container or (render.ui_target and render.ui_target.ui_container)
         if not container then error("MAME UI render container is unavailable") end
         local region = H.get_region()
-        local builder = H["layout_" .. H.gorf.config.page] or H.layout_all
-        local lines = builder(snapshot)
-        local warning = ""
-        if #H.gorf.state.warnings > 0 then
-            warning = "! " .. H.gorf.state.warnings[#H.gorf.state.warnings]
-        end
-        -- The warning slot is always present so a warning never moves the HUD body.
-        line(lines, warning, H.colors.error)
+        local lines = H.last_lines
+        if not H.gorf.config.hud_frozen or not lines then
+            local snapshot = H.gorf.refresh()
+            local builder = H["layout_" .. H.gorf.config.page] or H.layout_all
+            lines = builder(snapshot)
+            local warning = ""
+            if #H.gorf.state.warnings > 0 then
+                warning = "! " .. H.gorf.state.warnings[#H.gorf.state.warnings]
+            end
+            -- The warning slot is always present so a warning never moves the HUD body.
+            line(lines, warning, H.colors.error)
+            H.last_lines = lines
 
-        local now = snapshot.time or 0
-        local refresh_interval = 1 / math.max(1, H.gorf.config.hud_refresh_hz or 5)
-        if H.dirty or not H.last_render_time or now < H.last_render_time
-            or now - H.last_render_time >= refresh_interval then
-            if H.render_bitmap(region, lines) then H.last_render_time = now end
+            local now = snapshot.time or 0
+            local refresh_interval = 1 / math.max(1, H.gorf.config.hud_refresh_hz or 5)
+            if H.dirty or not H.last_render_time or now < H.last_render_time
+                or now - H.last_render_time >= refresh_interval then
+                if H.render_bitmap(region, lines) then H.last_render_time = now end
+            end
         end
         if H.texture then
             container:draw_quad(H.texture, region.x0, region.y0, region.x1, region.y1, 0xFFFFFFFF)
@@ -766,6 +789,13 @@ function H.attach(gorf)
         if value ~= nil then gorf.config.visible = not not value end
         return gorf.config.visible
     end
+    gorf.freeze = function(value)
+        if value ~= nil then
+            gorf.config.hud_frozen = not not value
+            if not gorf.config.hud_frozen then H.dirty = true end
+        end
+        return gorf.config.hud_frozen
+    end
     gorf.set_region = function(x0, y0, x1, y1)
         assert(type(x0) == "number" and type(y0) == "number"
             and type(x1) == "number" and type(y1) == "number", "region requires four numbers")
@@ -809,6 +839,7 @@ function H.attach(gorf)
     H.draw_count = 0
     H.last_error = nil
     H.reported_error = nil
+    H.last_lines = nil
     H.install_callback()
     return gorf
 end

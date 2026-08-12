@@ -5,8 +5,12 @@ setlocal
 cd /d "%~dp0"
 
 set "BUILD_GERMAN=0"
+set "BUILD_FRENCH=0"
 set "BUILD_KLINGON=0"
 if /i "%~1"=="-g" set "BUILD_GERMAN=1"
+if /i "%~1"=="--german" set "BUILD_GERMAN=1"
+if /i "%~1"=="-f" set "BUILD_FRENCH=1"
+if /i "%~1"=="--french" set "BUILD_FRENCH=1"
 if /i "%~1"=="-k" set "BUILD_KLINGON=1"
 if /i "%~1"=="--klingon" set "BUILD_KLINGON=1"
 
@@ -99,6 +103,55 @@ if "%BUILD_GERMAN%"=="1" (
     )
 )
 
+if "%BUILD_FRENCH%"=="1" (
+    if not exist "src\french\FRENCH_X11.asm" (
+        echo ERROR: French source file not found: src\french\FRENCH_X11.asm
+        pause
+        exit /b 1
+    )
+
+    echo [2.5/4] Assembling Optional French ROM: FRENCH_X11.asm
+    "%ZMAC_BIN%" -h -o src\zout\FRENCH_X11.hex -x src\zout\FRENCH_X11.lst src\french\FRENCH_X11.asm
+    if errorlevel 1 (
+        echo ERROR: zmac failed while assembling the French ROM.
+        pause
+        exit /b 1
+    )
+
+    powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+        "$inputFile = 'src\zout\FRENCH_X11.hex';" ^
+        "$outputFile = 'roms\french.x11';" ^
+        "if (-not (Test-Path $inputFile)) { Write-Error 'French HEX file missing.'; exit 1 };" ^
+        "$memory = [byte[]]::new(0x1000);" ^
+        "for ($i = 0; $i -lt 0x1000; $i++) { $memory[$i] = 0xFF };" ^
+        "$written = 0;" ^
+        "$hexLines = Get-Content $inputFile;" ^
+        "foreach ($line in $hexLines) {" ^
+        "    if (-not $line.StartsWith(':')) { continue };" ^
+        "    $byteCount = [Convert]::ToByte($line.Substring(1, 2), 16);" ^
+        "    $address = [Convert]::ToUInt16($line.Substring(3, 4), 16);" ^
+        "    $recordType = [Convert]::ToByte($line.Substring(7, 2), 16);" ^
+        "    if ($recordType -eq 0) {" ^
+        "        for ($i = 0; $i -lt $byteCount; $i++) {" ^
+        "            $targetAddr = $address + $i;" ^
+        "            if (($targetAddr -ge 0xC000) -and ($targetAddr -lt 0xD000)) {" ^
+        "                $memory[$targetAddr - 0xC000] = [Convert]::ToByte($line.Substring(9 + ($i * 2), 2), 16);" ^
+        "                $written++;" ^
+        "            }" ^
+        "        }" ^
+        "    }" ^
+        "};" ^
+        "if ($written -ne 0x1000) { Write-Error ('French ROM contains ' + $written + ' assembled bytes; expected 4096.'); exit 1 };" ^
+        "[System.IO.File]::WriteAllBytes($outputFile, $memory);" ^
+        "Write-Host ('  -> Wrote french.x11 (' + $memory.Length + ' bytes)');"
+
+    if errorlevel 1 (
+        echo ERROR: French ROM conversion failed.
+        pause
+        exit /b 1
+    )
+)
+
 if "%BUILD_KLINGON%"=="1" (
     if not exist "src\klingon\KLINGON_X11.asm" (
         echo ERROR: Klingon source file not found: src\klingon\KLINGON_X11.asm
@@ -169,7 +222,15 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
     "        }" ^
     "    }" ^
     "};" ^
-    "if (($env:BUILD_GERMAN -eq '1') -or ($env:BUILD_KLINGON -eq '1')) {" ^
+    "# gorfpgm1f uses gorf_a.x1..gorf_h.x8 rather than the German 873*.x* names." ^
+    "if ($env:BUILD_FRENCH -eq '1') {" ^
+    "    $romMap = [ordered]@{" ^
+    "        'gorf_a.x1' = 0x0000..0x0FFF; 'gorf_b.x2' = 0x1000..0x1FFF;" ^
+    "        'gorf_c.x3' = 0x2000..0x2FFF; 'gorf_d.x4' = 0x3000..0x3FFF;" ^
+    "        'gorf_e.x5' = 0x8000..0x8FFF; 'gorf_f.x6' = 0x9000..0x9FFF;" ^
+    "        'gorf_g.x7' = 0xA000..0xAFFF; 'gorf_h.x8' = 0xB000..0xBFFF;" ^
+    "    };" ^
+    "} elseif (($env:BUILD_GERMAN -eq '1') -or ($env:BUILD_KLINGON -eq '1')) {" ^
     "    $romMap = [ordered]@{" ^
     "        '873a.x1' = 0x0000..0x0FFF; '873b.x2' = 0x1000..0x1FFF;" ^
     "        '873c.x3' = 0x2000..0x2FFF; '873d.x4' = 0x3000..0x3FFF;" ^
@@ -204,6 +265,21 @@ if "%BUILD_GERMAN%"=="1" (
         "$romFiles += Get-Item 'roms\german.x11';" ^
         "if (Test-Path 'roms\sc01.bin') { $romFiles += Get-Item 'roms\sc01.bin' };" ^
         "Compress-Archive -Path $romFiles.FullName -DestinationPath 'roms\gorfpgm1g.zip' -Force"
+) else if "%BUILD_FRENCH%"=="1" (
+    echo [4/4] Packaging roms\gorfpgm1f.zip...
+    powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+        "$romFiles = Get-ChildItem -Path 'roms\gorf_?.x?';" ^
+        "if ($romFiles.Count -ne 8) { Write-Error 'Expected eight Program-2 CPU ROM files using French MAME member names.'; exit 1 };" ^
+        "$frenchAlias = 'src\zout\french_gorf.x11';" ^
+        "try {" ^
+        "    Copy-Item 'roms\french.x11' $frenchAlias -Force;" ^
+        "    $romFiles += Get-Item $frenchAlias;" ^
+        "    if (Test-Path 'roms\sc01.bin') { $romFiles += Get-Item 'roms\sc01.bin' };" ^
+        "    Compress-Archive -Path $romFiles.FullName -DestinationPath 'roms\gorfpgm1f.zip' -Force;" ^
+        "} finally {" ^
+        "    Remove-Item $frenchAlias -Force -ErrorAction SilentlyContinue;" ^
+        "}"
+
 ) else if "%BUILD_KLINGON%"=="1" (
     echo [4/4] Packaging roms\gorfpgm1g.zip...
     if exist "roms\gorfk.zip" del /q "roms\gorfk.zip"
@@ -231,6 +307,13 @@ if %ERRORLEVEL% neq 0 (
     echo ERROR: Packaging failed.
     pause
     exit /b %ERRORLEVEL%
+)
+
+if "%BUILD_FRENCH%"=="1" (
+    echo   ROM files:   roms\gorf_a.x1 through roms\gorf_h.x8
+    echo   French ROM:  roms\french.x11
+    echo   ZIP X11:     french_gorf.x11
+    echo   MAME ZIP:    roms\gorfpgm1f.zip
 )
 
 if "%BUILD_KLINGON%"=="1" (

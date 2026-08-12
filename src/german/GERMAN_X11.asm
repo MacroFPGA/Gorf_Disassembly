@@ -697,8 +697,11 @@ Pgm2SpeechTableEnd:
 ;        BC preserved
 ; USES:  AF, DE, HL
 ;
-; This retains the original X11 search algorithm and ROM layout.  Every speech
-; primitive used by program 2 has an exact, sorted key in Pgm2SpeechTable.
+; This retains the authentic Gorf X11 36-entry predecessor-search algorithm.
+; The translation keys, resident targets, message ordering, data placement,
+; queue handling, and $CC00 entry are adapted specifically for Program 2.
+; Every speech primitive used by Program 2 has an exact, sorted key in
+; Pgm2SpeechTable.
 ; -----------------------------------------------------------------------------
 
 TranslateSpeechPrimitive:
@@ -883,8 +886,13 @@ FillFF2048 MACRO
 ForeignCoinInputEntry:
         JP      PROGRAM2_FOREIGN_RESUME
 
-; The physical X11 device is a 4 KB ROM.  Unused bytes read as $FF.  Its final
-; 14 bytes contain the original DNA identification trailer.
+; The physical X11 device is a 4 KB ROM.  Unused bytes read as $FF.
+;
+; French and German Program-1 X11 images share the 13-byte identification
+; record at $CFF3-$CFFF.  The preceding byte at $CFF2 is not part of that
+; common record: authentic German stores $00 there, while authentic French
+; leaves it erased ($FF).  Preserve the German $CFF2 value explicitly so this
+; comment-only/source-structure correction does not change the verified image.
         IF      $CFF2 - $ >= 2048
         FillFF2048
         ENDIF
@@ -922,7 +930,10 @@ ForeignCoinInputEntry:
         FillFF1
         ENDIF
 
+GermanTrailerPrefix:
+        DB      $00                     ; Authentic German value at $CFF2
+
 RomIdentificationTrailer:
-        DB      $00,$00,"GORF",$00,"DNA",$00,$12,$15,$80
+        DB      $00,"GORF",$00,"DNA",$00,$12,$15,$80
 
         END

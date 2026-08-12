@@ -4,6 +4,14 @@ This directory contains the German X11 language ROM adapted for Gorf Program 2. 
 
 Program 1 and Program 2 do not use interchangeable X11 images. Their resident speech addresses, message indexes, queue entry points, and foreign-mode input paths differ.
 
+## Cross-ROM provenance
+
+The Program-1 German X11 is `german.x11` (CRC32 `3a3dbdcb`, SHA-1 `e20895d41d66d1a23cc445e4ae4628b16ebf83f2`). Comparison with the  Program-1 French X11 provides an independent control: both foreign ROMs use the same 36-entry predecessor-search translator even though their language data and physical layouts differ.
+
+The Program-2 German source therefore preserves the lookup algorithm, but not the Program-1 address map. Program-2 resident keys, message ordering, queue dispatch, and the `$CC00 -> $1769` input return are deliberate adaptations.
+
+The two  Program-1 ROMs also share the same 13-byte identification record at `$CFF3-$CFFF`. `$CFF2` is separate: German stores `$00`, while French leaves `$FF`. The Program-2 German derivative preserves the German `$00`.
+
 ## X11 interface
 
 | Address | Entry | Purpose |
@@ -175,7 +183,7 @@ Windows:
 build.bat -g
 ```
 
-Both scripts assemble the eight Program-2 CPU ROMs as `873a.x1` through `873h.x8`, assemble `src/german/GERMAN_X11.asm` as `roms/german.x11`, and create `roms/gorfpgm1g.zip`. The configured SC-01 speech ROM is included when present. Running the scripts without a language option retains the normal `gorf-a.bin` through `gorf-h.bin` output and creates `gorf.zip`.
+Both scripts assemble the eight Program-2 CPU ROMs as `873a.x1` through `873h.x8`, assemble `src/german/GERMAN_X11.asm` as `roms/german.x11`, and create `roms/gorfpgm1g.zip`. `sc01.bin` is required and included so the generated archive is self-contained for speech. Running the scripts without a language option retains the normal `gorf-a.bin` through `gorf-h.bin` output and creates `gorf.zip`.
 
 ## MAME compatibility
 
@@ -189,4 +197,8 @@ Select `Foreign` for the cabinet Language option. MAME identifies the driver as 
 
 ## Verification and provenance
 
-The German speech and display payloads derive from the existing German X11 work in this repository; the Program-2-specific interface, message order, address map, and queue guard are adaptations. Verification should cover the complete 4096-byte image, 52 display records, 36 sorted speech keys, the `$CC00 -> $1769` return path, attract mode, coin-up, player selection, rank announcements, and game start.
+The German speech and display payloads derive from the established German X11 work in this repository; the Program-2-specific interface, message order, address map, queue guard, and `$CC00` entry are adaptations.
+
+The current Program-2 source identifies its built image as CRC32 `d9bb9f11`, SHA-1 `d19dda593369988be931a54149df88c0411dd05d`. The  Program-1 German and French ROMs now independently support the 36-entry predecessor-search interpretation, so that algorithm should be treated as historical Gorf X11 behavior rather than a German-only inference.
+
+Verification should cover the complete 4096-byte image, 52 display records, 36 sorted speech keys, the `$CC00 -> $1769` return path, queue protection, attract mode, coin-up, player selection, rank announcements, game start, and clean exit.

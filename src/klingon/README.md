@@ -2,7 +2,12 @@
 
 This directory contains an experimental Klingon X11 language ROM for Gorf Program 2. It follows the working Program-2 German structure and supplies Klingon display text with direct SC-01 pronunciation approximations. It is a prototype for technical and gameplay testing, not a linguistically certified translation.
 
-Program 1 and Program 2 do not use interchangeable X11 images. Their resident speech addresses, message indexes, queue entry points, and foreign-mode input paths differ.
+
+## Provenance and compatibility
+
+This Klingon X11 is a project-created Program-2 derivative, not a historical Bally/Midway language ROM. Its executable contract comes from the Program-2 German conversion. The underlying 36-entry predecessor-search design is now independently confirmed by both  Program-1 German and French X11 ROMs.
+
+Klingon therefore preserves the historical lookup behavior and the Program-2 `$C000` / `$CC00` interface, while its display text, local SC-01 records, and translation targets are project-specific. The `$CFF2 = $00` byte is inherited from the German template; the shared `GORF` / `DNA` identification record begins separately at `$CFF3`.
 
 ## X11 interface
 
@@ -175,7 +180,7 @@ Windows:
 build.bat -k
 ```
 
-Both scripts assemble the eight Program-2 CPU ROMs as `873a.x1` through `873h.x8`, assemble `src/klingon/KLINGON_X11.asm` as `roms/klingon.x11`, and create `roms/gorfpgm1g.zip`. Inside that compatibility archive, the Klingon bytes use the member name `german.x11`, which is the name expected by the stock MAME driver.
+Both scripts assemble the eight Program-2 CPU ROMs as `873a.x1` through `873h.x8`, assemble `src/klingon/KLINGON_X11.asm` as `roms/klingon.x11`, and create `roms/gorfpgm1g.zip`. Inside that compatibility archive, the Klingon bytes use the member name `german.x11`, which is the name expected by the stock MAME driver. `sc01.bin` is required and included so the generated archive is self-contained for speech.
 
 ## MAME compatibility
 
@@ -189,4 +194,6 @@ Select `Foreign` for the cabinet Language option. Audit warnings are expected be
 
 ## Verification status
 
-Static verification should cover the complete 4096-byte image, 52 display records, 36 sorted speech keys, record lengths, the `$CC00 -> $1769` return path, and queue protection. Runtime review should cover attract mode, display text, coin-up, player selection, game start, every rank, and all random speech paths. Klingon wording and SC-01 pronunciation remain subject to listening review.
+Static verification should cover the complete 4096-byte image, 52 display records, 36 sorted speech keys, record lengths, the `$CC00 -> $1769` return path, queue protection, the inherited German-template `$CFF2` byte, and the separate `$CFF3-$CFFF` identification record.
+
+Runtime review should cover attract mode, display text, coin-up, player selection, game start, every rank, all random speech paths, and clean exit. Klingon wording and SC-01 pronunciation remain subject to listening review; the historical German/French comparison validates the lookup architecture, not the Klingon language content.

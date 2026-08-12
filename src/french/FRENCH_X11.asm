@@ -5,24 +5,37 @@
 ; ROM map:  $C000-$CFFF (X11 socket, 4 KB)
 ;
 ; Historical source:
-;   Authentic Program-1 French X11: french_gorf.x11
+;    Program-1 French X11: french_gorf.x11
 ;   CRC-32: 759D7F66
 ;   SHA-1:  339B719FC1FFE3C2BE49FBD5CF562D06134ABADC
 ;
 ; The historical filename is intentionally unusual.  This repository normalizes
-; the source name to FRENCH_X11.asm, while the build emits french_gorf.x11 so the
-; MAME gorfpgm1f package retains the member name used by the original set.
+; the project artifact to FRENCH_X11.asm -> roms/french.x11.  For stock MAME
+; compatibility, build.sh/build.bat temporarily alias that image to
+; french_gorf.x11 only while creating gorfpgm1f.zip.
+;
+; MAME-tested Program-2 image produced by this source lineage:
+;   CRC-32: C6F7E746
+;   SHA-1:  627346AB5BE396F54B55B90E2AF59FFBB75B121F
 ;
 ; The Program-1 French and German sets use byte-identical X1-X8 CPU ROMs.
-; Their language behavior is therefore isolated to X11.  The French X11 has
-; its own data layout, but its translator proves the same 36-entry predecessor
-; search architecture used by the German ROM:
+; Their language behavior is therefore isolated to X11.  The  French
+; image is an executable/data hybrid with this verified layout:
 ;
-;   $C6A7-$C6EE  French Program-1 translation targets
-;   $C6EF-$C736  Program-1 English speech keys
-;   $C737-$C76E  Program-1 translation/search routine
+;   $C000-$C002  JP $C737
+;   $C003-$C2FF  54 length-prefixed Program-1 display/control records
+;   $C300-$C6A6  34 local French SC-01 records
+;   $C6A7-$C6EE  36 translation targets
+;   $C6EF-$C736  36 sorted Program-1 English speech keys
+;   $C737-$C76E  36-entry predecessor-search translator
+;   $C76F-$CFF2  Erased $FF padding
+;   $CFF3-$CFFF  Shared GORF/DNA identification record
 ;
-; This Program-2 adaptation preserves the authentic French SC-01 payloads and
+; The French translator independently confirms the same 36-entry predecessor
+; search architecture found in the  German Program-1 X11.  Its final
+; dispatcher is Program 1's speech queue entry at $10CA.
+;
+; This Program-2 adaptation preserves the  French SC-01 payloads and
 ; the original 36-entry search behavior while replacing the resident addresses,
 ; message ordering, speech queue destination, and foreign-mode return path that
 ; changed between Gorf Program 1 and Program 2.
@@ -41,7 +54,7 @@
 ;
 ; Message and speech records both use a one-byte payload length followed by
 ; that many data bytes.  SC-01 phoneme bytes are copied byte-for-byte from the
-; authentic Program-1 French ROM, including the inflection bits in bits 7 and 6.
+;  Program-1 French ROM, including the inflection bits in bits 7 and 6.
 ;
         ORG     $C000
 
@@ -56,8 +69,8 @@ SPEECH_QUEUE_WRITE_PTR  EQU     $D125
 SPEECH_QUEUE_READ_PTR   EQU     $D127
 
 ; Program-2 speech primitive addresses.  The first 26 are in the resident
-; speech block.  The next three are upper-ROM records, and the final seven are
-; attract-mode speech records.
+; speech block.  The next three form the upper-ROM flagship sequence.  $B3BE is
+; the coin/start prompt; $B3D4-$B465 are the randomized game-start records.
 PGM2_SPK_INSERT_COIN    EQU     $115D
 PGM2_SPK_GORF           EQU     $116D
 PGM2_SPK_SPACE          EQU     $1185
@@ -84,9 +97,9 @@ PGM2_SPK_BITE           EQU     $12CE
 PGM2_SPK_HAIL           EQU     $12DB
 PGM2_SPK_ENEMY          EQU     $12FC
 PGM2_SPK_BETCHA         EQU     $1317
-PGM2_SPK_A985           EQU     $A985
-PGM2_SPK_A9A8           EQU     $A9A8
-PGM2_SPK_A9C1           EQU     $A9C1
+PGM2_SPK_FLAGSHIP_INTRO           EQU     $A985        ; "Next time will be harder, but for now"
+PGM2_SPK_GORFIAN_CHRONICLES           EQU     $A9A8        ; "In the Gorfian chronicles"
+PGM2_SPK_FLAGSHIP_HIT           EQU     $A9C1        ; "For hitting my flagship"
 PGM2_SPK_PUSH           EQU     $B3BE
 PGM2_SPK_DOOM           EQU     $B3D4
 PGM2_SPK_SURVIVAL       EQU     $B3EF
@@ -106,7 +119,7 @@ X11Entry:
 ; French message table
 ;
 ; Program 2 indexes 52 length-prefixed records beginning at $C003.  Most French
-; wording comes directly from the authentic Program-1 ROM.  Where Program 2
+; wording comes directly from the  Program-1 ROM.  Where Program 2
 ; changed its English record boundaries or introduced new records, the French
 ; text is recomposed from the historical wording or translated specifically for
 ; the Program-2 screen.
@@ -119,10 +132,19 @@ X11Entry:
 ;     byte-for-byte identical to the resident English table;
 ;   - indexes 49 through 51 are Program-2-only credit/copyright records.
 ;
-; The Program-1 French image also contains four display-like records immediately
-; before its speech block ("POUR UN JEU A 2", "OU", "AVEC DES VAISSEAUX",
-; "SUPPLEMENTAIRES").  They are useful provenance for the Program-2 wording but
-; are not copied as additional indexes because Program 2 requires exactly 52.
+; The  Program-1 French table contains 54 records, not 52.  Its
+; structural/control records also occupy different indexes from Program 2.
+; After Program-1 record 48 ("LE MEME JOUEUR"), five additional records appear
+; before the $C300 speech block:
+;
+;   49  "PARTICIPANTS"
+;   50  "POUR UN JEU A 2"
+;   51  "OU"
+;   52  "AVEC DES VAISSEAUX"
+;   53  "SUPPLEMENTAIRES"
+;
+; Those records are provenance for the recomposed Program-2 prompts; they are
+; not appended here because Program 2 indexes exactly 52 positions.
 ; -----------------------------------------------------------------------------
 
 FrenchMessageTable:
@@ -387,17 +409,22 @@ Message_51_TousDroitsReserves:
 Message_51_TousDroitsReserves_End:
 
 ; -----------------------------------------------------------------------------
-; Authentic French SC-01 speech primitives
+;  French SC-01 speech primitives
 ;
-; The records below are copied byte-for-byte from french_gorf.x11.  Their
-; physical order follows the original French ROM, which differs slightly from
-; the German ROM: French stores Insert Coin at $C32B and Push a Player Button at
-; $C52C.  Labels describe the English primitive semantics used to select each
-; translation; they are not phonetic transcriptions of the French speech.
+; The 34 local records below are copied byte-for-byte from french_gorf.x11.
+; Their physical order follows the original French ROM, which differs from the
+; German ROM: French stores Insert Coin at $C32B and Push a Player Button at
+; $C52C.  Across these records, all 901 encoded payload bytes are preserved.
+;
+; "Working French transcription" comments are documentary reconstructions from
+; the SC-01 data and known selector semantics.  They are not bytes stored in the
+; ROM and should not override the encoded record if later listening suggests a
+; wording correction.
 ; -----------------------------------------------------------------------------
 
 ; Program-1 source $C300, PGM1 key $1180, PGM2 key $116D
 ; English selector meaning: I am the Gorfian Empire
+; Working French transcription: Je suis l'empire gorfien.
 FrenchSpeech_Gorf:
         DB      FrenchSpeech_Gorf_End - $ - 1
         DB      $3E,$1A,$1A,$36,$36,$03,$1F,$37,$3C,$18,$30,$30
@@ -407,6 +434,7 @@ FrenchSpeech_Gorf_End:
 
 ; Program-1 source $C31A, PGM1 key $11DA, PGM2 key $11C7
 ; English selector meaning: Long live Gorf
+; Working French transcription: Longue vie, Gorf.
 FrenchSpeech_Long:
         DB      FrenchSpeech_Long_End - $ - 1
         DB      $3E,$18,$26,$1C,$0F,$4F,$7C,$43,$5C,$44,$74,$34
@@ -415,6 +443,7 @@ FrenchSpeech_Long_End:
 
 ; Program-1 source $C32B, PGM1 key $1170, PGM2 key $115D
 ; English selector meaning: Insert coin
+; Working French transcription: Déposez jeton.
 FrenchSpeech_InsertCoin:
         DB      FrenchSpeech_InsertCoin_End - $ - 1
         DB      $3E,$1E,$00,$0A,$03,$25,$26,$12,$00,$3E,$3E,$3B
@@ -423,6 +452,7 @@ FrenchSpeech_InsertCoin_End:
 
 ; Program-1 source $C340, PGM1 key $11EA, PGM2 key $11D7
 ; English selector meaning: Gorfian robots, attack! Attack!
+; Working French transcription: Robots gorfiens, attaque ! Attaque !
 FrenchSpeech_Robots:
         DB      FrenchSpeech_Robots_End - $ - 1
         DB      $3E,$3A,$35,$0E,$74,$1C,$04,$34,$2B,$1D,$29,$2F
@@ -432,6 +462,7 @@ FrenchSpeech_Robots_End:
 
 ; Program-1 source $C35B, PGM1 key $B342, PGM2 key $B3D4
 ; English selector meaning: You will meet a Gorfian doom
+; Working French transcription: Vous connaîtrez une fin gorfienne.
 FrenchSpeech_Doom:
         DB      FrenchSpeech_Doom_End - $ - 1
         DB      $3E,$0F,$37,$03,$19,$34,$0D,$0D,$0A,$2A,$2B,$0A
@@ -441,6 +472,7 @@ FrenchSpeech_Doom_End:
 
 ; Program-1 source $C37C, PGM1 key $B35D, PGM2 key $B3EF
 ; English selector meaning: Survival is impossible
+; Working French transcription: Toute survie est hors de question.
 FrenchSpeech_Survival:
         DB      FrenchSpeech_Survival_End - $ - 1
         DB      $3E,$2A,$37,$2A,$03,$1F,$22,$2B,$0F,$69,$69,$03
@@ -450,6 +482,7 @@ FrenchSpeech_Survival_End:
 
 ; Program-1 source $C39B, PGM1 key $B394, PGM2 key $B426
 ; English selector meaning: My Gorfian robots are unbeatable
+; Working French transcription: Mes robots gorfiens sont imbattables.
 FrenchSpeech_Gorfian:
         DB      FrenchSpeech_Gorfian_End - $ - 1
         DB      $3E,$0C,$0A,$03,$0F,$2B,$34,$0E,$34,$03,$1C,$04
@@ -459,6 +492,7 @@ FrenchSpeech_Gorfian_End:
 
 ; Program-1 source $C3BC, PGM1 key $B3B7, PGM2 key $B449
 ; English selector meaning: I am a Gorfian consciousness
+; Working French transcription: Je suis la conscience gorfienne.
 FrenchSpeech_IAm:
         DB      FrenchSpeech_IAm_End - $ - 1
         DB      $3E,$1A,$00,$03,$1F,$37,$3C,$03,$18,$08,$03,$03
@@ -468,6 +502,7 @@ FrenchSpeech_IAm_End:
 
 ; Program-1 source $C3DC, PGM1 key $125E, PGM2 key $124B
 ; English selector meaning: Gorfians take no prisoners
+; Working French transcription: Les Gorfiens ne font pas de prisonniers.
 FrenchSpeech_Prisoner:
         DB      FrenchSpeech_Prisoner_End - $ - 1
         DB      $3E,$1C,$04,$34,$34,$2B,$1D,$62,$6F,$3E,$3E,$0D
@@ -477,6 +512,7 @@ FrenchSpeech_Prisoner_End:
 
 ; Program-1 source $C3FF, PGM1 key $1209, PGM2 key $11F6
 ; English selector meaning: Bad move
+; Working French transcription: Mauvais mouvement.
 FrenchSpeech_BadMove:
         DB      FrenchSpeech_BadMove_End - $ - 1
         DB      $3E,$0C,$35,$0F,$2F,$03,$0C,$37,$0F,$0C,$15,$3E
@@ -484,6 +520,7 @@ FrenchSpeech_BadMove_End:
 
 ; Program-1 source $C40C, PGM1 key $1241, PGM2 key $122E
 ; English selector meaning: Got you
+; Working French transcription: Je vous ai eu.
 FrenchSpeech_GotYou:
         DB      FrenchSpeech_GotYou_End - $ - 1
         DB      $3E,$1A,$00,$03,$03,$0F,$37,$03,$03,$12,$0A,$03
@@ -492,6 +529,7 @@ FrenchSpeech_GotYou_End:
 
 ; Program-1 source $C41D, PGM1 key $130F, PGM2 key $12FC
 ; English selector meaning: Another enemy ship destroyed
+; Working French transcription: Un autre vaisseau ennemi détruit.
 FrenchSpeech_Enemy:
         DB      FrenchSpeech_Enemy_End - $ - 1
         DB      $3E,$3B,$03,$75,$2A,$2B,$00,$03,$0F,$0A,$1F,$34
@@ -501,6 +539,7 @@ FrenchSpeech_Enemy_End:
 
 ; Program-1 source $C438, PGM1 key $121D, PGM2 key $120A
 ; English selector meaning: You cannot escape the Gorfian robots
+; Working French transcription: Vous ne pouvez échapper aux robots de Gorf.
 FrenchSpeech_Escape:
         DB      FrenchSpeech_Escape_End - $ - 1
         DB      $3E,$0F,$37,$03,$0D,$00,$03,$65,$37,$4F,$4A,$03
@@ -511,6 +550,7 @@ FrenchSpeech_Escape_End:
 
 ; Program-1 source $C45E, PGM1 key $1256, PGM2 key $1243
 ; English selector meaning: Too bad
+; Working French transcription: Bien essayé.
 FrenchSpeech_TooBad:
         DB      FrenchSpeech_TooBad_End - $ - 1
         DB      $3E,$0E,$22,$2F,$03,$0A,$1F,$1F,$0A,$22,$0A,$3E
@@ -518,6 +558,7 @@ FrenchSpeech_TooBad_End:
 
 ; Program-1 source $C46B, PGM1 key $11BB, PGM2 key $11A8
 ; English selector meaning: Try again; I devour your coins
+; Working French transcription: Essayez encore ; je dévore la monnaie.
 FrenchSpeech_Try:
         DB      FrenchSpeech_Try_End - $ - 1
         DB      $3E,$0A,$1F,$0A,$22,$0A,$03,$30,$30,$59,$75,$6B
@@ -527,6 +568,7 @@ FrenchSpeech_Try_End:
 
 ; Program-1 source $C48C, PGM1 key $12E1, PGM2 key $12CE
 ; English selector meaning: Bite the dust
+; Working French transcription: Allez mordre la poussière.
 FrenchSpeech_Bite:
         DB      FrenchSpeech_Bite_End - $ - 1
         DB      $3E,$08,$58,$49,$03,$03,$0C,$34,$2B,$1E,$0A,$03
@@ -535,6 +577,7 @@ FrenchSpeech_Bite_End:
 
 ; Program-1 source $C4A4, PGM1 key $119F, PGM2 key $118C
 ; English selector meaning: Gorfians conquer another galaxy
+; Working French transcription: Les Gorfiens ont conquis une autre galaxie.
 FrenchSpeech_Conquer:
         DB      FrenchSpeech_Conquer_End - $ - 1
         DB      $3E,$18,$2F,$1C,$04,$34,$34,$2B,$1D,$22,$2F,$03
@@ -544,6 +587,7 @@ FrenchSpeech_Conquer_End:
 
 ; Program-1 source $C4C8, PGM1 key $12EE, PGM2 key $12DB
 ; English selector meaning: All hail the supreme Gorfian Empire
+; Working French transcription: Vive le suprême empire gorfien.
 FrenchSpeech_Hail:
         DB      FrenchSpeech_Hail_End - $ - 1
         DB      $3E,$0F,$62,$4F,$03,$18,$00,$03,$1F,$22,$25,$6B
@@ -553,17 +597,19 @@ FrenchSpeech_Hail_End:
 
 ; Program-1 source $C4E8, PGM1 key $A8DA, PGM2 key $A985
 ; English selector meaning: Next time will be harder, but for now
-FrenchSpeech_For_A985:
-        DB      FrenchSpeech_For_A985_End - $ - 1
+; Working French transcription: La prochaine fois, ce sera plus difficile, mais dans l'entretemps...
+FrenchSpeech_NextTimeHarder:
+        DB      FrenchSpeech_NextTimeHarder_End - $ - 1
         DB      $3E,$3E,$18,$08,$03,$25,$2B,$34,$10,$1B,$0A,$0D
         DB      $03,$1D,$37,$08,$03,$1F,$00,$03,$1F,$00,$2B,$08
         DB      $03,$65,$58,$62,$03,$1E,$22,$1D,$22,$5F,$62,$18
         DB      $3E,$3E,$0C,$06,$03,$1E,$30,$30,$03,$18,$30,$2A
         DB      $2B,$00,$2A,$30,$30,$3E
-FrenchSpeech_For_A985_End:
+FrenchSpeech_NextTimeHarder_End:
 
 ; Program-1 source $C51F, PGM1 key $124A, PGM2 key $1237
 ; English selector meaning: Nice shot
+; Working French transcription: Bien visé.
 FrenchSpeech_Nice:
         DB      FrenchSpeech_Nice_End - $ - 1
         DB      $3E,$3E,$0E,$22,$2F,$03,$0F,$22,$12,$0A,$3E,$3E
@@ -571,6 +617,7 @@ FrenchSpeech_Nice_End:
 
 ; Program-1 source $C52C, PGM1 key $B32C, PGM2 key $B3BE
 ; English selector meaning: Push a player button
+; Working French transcription: Pressez le bouton joueur.
 FrenchSpeech_Push:
         DB      FrenchSpeech_Push_End - $ - 1
         DB      $3E,$25,$2B,$0A,$1F,$1F,$0B,$3E,$3E,$3B,$3E,$3E
@@ -580,6 +627,7 @@ FrenchSpeech_Push_End:
 
 ; Program-1 source $C547, PGM1 key $B373, PGM2 key $B405
 ; English selector meaning: Robot warriors, seek and destroy the
+; Working French transcription: Guerriers robots, poursuivez et détruisez le...
 FrenchSpeech_RoboWarrior:
         DB      FrenchSpeech_RoboWarrior_End - $ - 1
         DB      $3E,$1C,$1C,$0A,$2B,$6B,$62,$4A,$03,$0F,$2B,$34
@@ -590,6 +638,7 @@ FrenchSpeech_RoboWarrior_End:
 
 ; Program-1 source $C56E, PGM1 key $12C5, PGM2 key $12B2
 ; English selector meaning: Some galactic defender you are
+; Working French transcription: Quelle sorte de protecteur de la galaxie êtes-vous ?
 FrenchSpeech_Some:
         DB      FrenchSpeech_Some_End - $ - 1
         DB      $3E,$59,$4A,$58,$03,$1F,$74,$6B,$6A,$03,$1E,$00
@@ -600,6 +649,7 @@ FrenchSpeech_Some_End:
 
 ; Program-1 source $C59D, PGM1 key $132A, PGM2 key $1317
 ; English selector meaning: Your end draws near
+; Working French transcription: Votre fin est proche.
 FrenchSpeech_Betcha:
         DB      FrenchSpeech_Betcha_End - $ - 1
         DB      $3E,$0F,$34,$2A,$2B,$03,$1D,$2F,$03,$0A,$03,$65
@@ -608,16 +658,18 @@ FrenchSpeech_Betcha_End:
 
 ; Program-1 source $C5AF, PGM1 key $A8FD, PGM2 key $A9A8
 ; English selector meaning: In the Gorfian chronicles
-FrenchSpeech_For_A9A8:
-        DB      FrenchSpeech_For_A9A8_End - $ - 1
+; Working French transcription: Votre nom sera dans le journal gorfien.
+FrenchSpeech_GorfianChronicles:
+        DB      FrenchSpeech_GorfianChronicles_End - $ - 1
         DB      $3E,$3E,$0F,$34,$2A,$2B,$03,$4D,$75,$03,$1F,$00
         DB      $2B,$08,$03,$1E,$30,$30,$03,$18,$02,$03,$1A,$37
         DB      $2B,$4D,$48,$58,$03,$1C,$04,$34,$34,$2B,$1D,$29
         DB      $2F,$3E,$3E
-FrenchSpeech_For_A9A8_End:
+FrenchSpeech_GorfianChronicles_End:
 
 ; Program-1 source $C5D7, PGM1 key $B3D3, PGM2 key $B465
 ; English selector meaning: Prepare yourself for annihilation
+; Working French transcription: Votre destruction est proche.
 FrenchSpeech_Prepare:
         DB      FrenchSpeech_Prepare_End - $ - 1
         DB      $3E,$0F,$34,$2A,$2B,$00,$03,$1E,$0A,$1F,$2A,$2B
@@ -627,15 +679,17 @@ FrenchSpeech_Prepare_End:
 
 ; Program-1 source $C5F3, PGM1 key $A916, PGM2 key $A9C1
 ; English selector meaning: For hitting my flagship
-FrenchSpeech_For_A9C1:
-        DB      FrenchSpeech_For_A9C1_End - $ - 1
+; Working French transcription: Pour avoir descendu mon vaisseau amiral.
+FrenchSpeech_FlagshipHit:
+        DB      FrenchSpeech_FlagshipHit_End - $ - 1
         DB      $3E,$3E,$25,$37,$2B,$03,$08,$0F,$37,$15,$2B,$03
         DB      $1E,$0A,$1F,$30,$30,$5E,$62,$03,$0C,$35,$03,$0F
         DB      $0A,$1F,$06,$37,$03,$08,$0C,$22,$2B,$08,$18,$3E
-FrenchSpeech_For_A9C1_End:
+FrenchSpeech_FlagshipHit_End:
 
 ; Program-1 source $C618, PGM1 key $12AB, PGM2 key $1298
 ; English selector meaning: You have been promoted to
+; Working French transcription: Vous avez été promu
 FrenchSpeech_Promote:
         DB      FrenchSpeech_Promote_End - $ - 1
         DB      $3E,$0F,$37,$03,$12,$08,$0F,$0A,$03,$12,$0A,$2A
@@ -644,6 +698,7 @@ FrenchSpeech_Promote_End:
 
 ; Program-1 source $C62D, PGM1 key $1277, PGM2 key $1264
 ; English selector meaning: Cadet
+; Working French transcription: Cadet de l'espace
 FrenchSpeech_Cadet:
         DB      FrenchSpeech_Cadet_End - $ - 1
         DB      $19,$19,$08,$5E,$6F,$03,$1E,$00,$03,$18,$0A,$1F
@@ -652,6 +707,7 @@ FrenchSpeech_Cadet_End:
 
 ; Program-1 source $C63E, PGM1 key $127E, PGM2 key $126B
 ; English selector meaning: Captain
+; Working French transcription: Capitaine de l'espace
 FrenchSpeech_Captain:
         DB      FrenchSpeech_Captain_End - $ - 1
         DB      $19,$08,$25,$22,$6A,$4A,$4D,$03,$1E,$00,$03,$18
@@ -660,6 +716,7 @@ FrenchSpeech_Captain_End:
 
 ; Program-1 source $C651, PGM1 key $1287, PGM2 key $1274
 ; English selector meaning: Colonel
+; Working French transcription: Colonel de l'espace
 FrenchSpeech_Colonel:
         DB      FrenchSpeech_Colonel_End - $ - 1
         DB      $19,$34,$18,$34,$4D,$4A,$58,$03,$1E,$00,$03,$18
@@ -668,6 +725,7 @@ FrenchSpeech_Colonel_End:
 
 ; Program-1 source $C664, PGM1 key $128E, PGM2 key $127B
 ; English selector meaning: General
+; Working French transcription: Général de l'espace
 FrenchSpeech_General:
         DB      FrenchSpeech_General_End - $ - 1
         DB      $1A,$1A,$0A,$0D,$0A,$6B,$48,$58,$03,$1E,$00,$03
@@ -676,6 +734,7 @@ FrenchSpeech_General_End:
 
 ; Program-1 source $C678, PGM1 key $1297, PGM2 key $1284
 ; English selector meaning: Warrior
+; Working French transcription: Guerrier de l'espace
 FrenchSpeech_Warrior:
         DB      FrenchSpeech_Warrior_End - $ - 1
         DB      $1C,$04,$2B,$30,$30,$03,$1C,$04,$0A,$6B,$62,$4A
@@ -684,6 +743,7 @@ FrenchSpeech_Warrior_End:
 
 ; Program-1 source $C690, PGM1 key $12A0, PGM2 key $128D
 ; English selector meaning: Avenger
+; Working French transcription: Suprême héros de l'espace
 FrenchSpeech_Avenger:
         DB      FrenchSpeech_Avenger_End - $ - 1
         DB      $1F,$22,$25,$2B,$0A,$0C,$03,$1B,$0A,$6B,$75,$03
@@ -730,9 +790,9 @@ FrenchSpeechTable:
         DW      FrenchSpeech_Hail
         DW      FrenchSpeech_Enemy
         DW      FrenchSpeech_Betcha
-        DW      FrenchSpeech_For_A985
-        DW      FrenchSpeech_For_A9A8
-        DW      FrenchSpeech_For_A9C1
+        DW      FrenchSpeech_NextTimeHarder
+        DW      FrenchSpeech_GorfianChronicles
+        DW      FrenchSpeech_FlagshipHit
         DW      FrenchSpeech_Push
         DW      FrenchSpeech_Doom
         DW      FrenchSpeech_Survival
@@ -769,9 +829,9 @@ Pgm2SpeechTable:
         DW      PGM2_SPK_HAIL
         DW      PGM2_SPK_ENEMY
         DW      PGM2_SPK_BETCHA
-        DW      PGM2_SPK_A985
-        DW      PGM2_SPK_A9A8
-        DW      PGM2_SPK_A9C1
+        DW      PGM2_SPK_FLAGSHIP_INTRO
+        DW      PGM2_SPK_GORFIAN_CHRONICLES
+        DW      PGM2_SPK_FLAGSHIP_HIT
         DW      PGM2_SPK_PUSH
         DW      PGM2_SPK_DOOM
         DW      PGM2_SPK_SURVIVAL
@@ -789,7 +849,7 @@ Pgm2SpeechTableEnd:
 ;        BC preserved
 ; USES:  AF, DE, HL
 ;
-; This retains the authentic Gorf X11 36-entry predecessor-search algorithm.
+; This retains the  Gorf X11 36-entry predecessor-search algorithm.
 ; The translation keys, resident targets, message ordering, data placement,
 ; queue handling, and $CC00 entry are adapted specifically for Program 2.
 ; Every speech primitive used by Program 2 has an exact, sorted key in
@@ -845,7 +905,7 @@ TranslationSuppressed:
         RET
 
 ; Program 2's resident queue routine writes the next primitive without testing
-; whether its eight-entry ring buffer is full.  Several authentic French
+; whether its eight-entry ring buffer is full.  Several  French
 ; primitives are substantially longer than the corresponding English records,
 ; and compound announcements can enqueue multiple records in quick succession.
 ; Reserve one slot so equal read/write pointers continue to mean "empty," as the
@@ -981,7 +1041,7 @@ ForeignCoinInputEntry:
 ;
 ; French and German Program-1 X11 images share the 13-byte identification
 ; record at $CFF3-$CFFF.  The preceding byte at $CFF2 is not part of that
-; common record: authentic German stores $00 there, while authentic French
+; common record:  German stores $00 there, while  French
 ; leaves it erased ($FF).  This French derivative preserves the French value
 ; by padding through $CFF2 and starting the identification record at $CFF3.
         IF      $CFF3 - $ >= 2048

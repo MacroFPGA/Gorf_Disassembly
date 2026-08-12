@@ -266,12 +266,9 @@ create_zip() {
         zip_inputs+=("$ROMS_DIR/$rom_name")
     done
 
-    if [[ -f "$SC01_FILE" ]]; then
-        zip_inputs+=("$SC01_FILE")
-        log "      Including optional speech ROM: $SC01_FILE"
-    else
-        log "      Optional speech ROM not found; sc01.bin will not be included."
-    fi
+    [[ -f "$SC01_FILE" ]] || fail "Required speech ROM not found: $SC01_FILE"
+    zip_inputs+=("$SC01_FILE")
+    log "      Including required speech ROM: $SC01_FILE"
 
     if [[ "$BUILD_GERMAN" == true ]]; then
         if [[ -f "$GERMAN_OUT_FILE" ]]; then

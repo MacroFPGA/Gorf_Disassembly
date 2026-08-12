@@ -257,13 +257,19 @@ if %ERRORLEVEL% neq 0 (
     exit /b %ERRORLEVEL%
 )
 
+if not exist "roms\sc01.bin" (
+    echo ERROR: Required speech ROM not found: roms\sc01.bin
+    pause
+    exit /b 1
+)
+
 if "%BUILD_GERMAN%"=="1" (
     echo [4/4] Packaging roms\gorfpgm1g.zip...
     powershell -NoProfile -ExecutionPolicy Bypass -Command ^
         "$romFiles = Get-ChildItem -Path 'roms\873?.x?';" ^
         "if ($romFiles.Count -ne 8) { Write-Error 'Expected eight Program-2 CPU ROM files.'; exit 1 };" ^
         "$romFiles += Get-Item 'roms\german.x11';" ^
-        "if (Test-Path 'roms\sc01.bin') { $romFiles += Get-Item 'roms\sc01.bin' };" ^
+        "$romFiles += Get-Item 'roms\sc01.bin';" ^
         "Compress-Archive -Path $romFiles.FullName -DestinationPath 'roms\gorfpgm1g.zip' -Force"
 ) else if "%BUILD_FRENCH%"=="1" (
     echo [4/4] Packaging roms\gorfpgm1f.zip...
@@ -274,7 +280,7 @@ if "%BUILD_GERMAN%"=="1" (
         "try {" ^
         "    Copy-Item 'roms\french.x11' $frenchAlias -Force;" ^
         "    $romFiles += Get-Item $frenchAlias;" ^
-        "    if (Test-Path 'roms\sc01.bin') { $romFiles += Get-Item 'roms\sc01.bin' };" ^
+        "    $romFiles += Get-Item 'roms\sc01.bin';" ^
         "    Compress-Archive -Path $romFiles.FullName -DestinationPath 'roms\gorfpgm1f.zip' -Force;" ^
         "} finally {" ^
         "    Remove-Item $frenchAlias -Force -ErrorAction SilentlyContinue;" ^
@@ -290,7 +296,7 @@ if "%BUILD_GERMAN%"=="1" (
         "try {" ^
         "    Copy-Item 'roms\klingon.x11' $klingonAlias -Force;" ^
         "    $romFiles += Get-Item $klingonAlias;" ^
-        "    if (Test-Path 'roms\sc01.bin') { $romFiles += Get-Item 'roms\sc01.bin' };" ^
+        "    $romFiles += Get-Item 'roms\sc01.bin';" ^
         "    Compress-Archive -Path $romFiles.FullName -DestinationPath 'roms\gorfpgm1g.zip' -Force;" ^
         "} finally {" ^
         "    Remove-Item $klingonAlias -Force -ErrorAction SilentlyContinue;" ^
@@ -299,7 +305,7 @@ if "%BUILD_GERMAN%"=="1" (
     echo [4/4] Packaging roms\gorf.zip...
     powershell -NoProfile -ExecutionPolicy Bypass -Command ^
         "$romFiles = Get-ChildItem -Path 'roms\gorf-?.bin';" ^
-        "if (Test-Path 'roms\sc01.bin') { $romFiles += Get-Item 'roms\sc01.bin' };" ^
+        "$romFiles += Get-Item 'roms\sc01.bin';" ^
         "Compress-Archive -Path $romFiles.FullName -DestinationPath 'roms\gorf.zip' -Force"
 )
 

@@ -80,9 +80,8 @@ COLDSTRT:   nop
 
 ;******************************************************************************************
 ; ----> ENTER   Enters Terse mode via RST $08 ($CF).
-;               Saves the current TERSE BC continuation on the shared IX
-;               return/control stack, then loads BC with the colon word body.
-;               It does not save the general Z80 processor state.
+;               Pushes the current processor state onto the IX (return/loop) stack,
+;               saves the return address, and sets up execution.
 ;******************************************************************************************
 
 _ENTER      EQU     $CF                 ; $CF is hex for RST $08.
@@ -1800,7 +1799,7 @@ norrel1:    and     $03
             and     $FC                 ; Mask out old shift bits
             or      e                   ; OR in new shift bits
             ld      c,a                 ; Save back to C
-            ret                         ; (LABEL NULRET)
+nulret:     ret                         ; LABEL NULRET
 
 ;##########################################################################################
 ;    { BLOCK 0039 }
@@ -2842,7 +2841,7 @@ _DISPBCD2:  pop     hl                  ; Pop BCD value directly into HL
 ; ----> 2wp!    Subroutine: Writes a 16-bit word (DE) to hardware Write-Protected RAM (HL).
 ;               Unlocks the NVRAM by writing $A5 to port $5B before each byte write.
 ;******************************************************************************************
-_2wp_bang:  ld      a,$A5
+two_wp_bang:  ld      a,$A5
             out     ($5B),a             ; Unlock NVRAM
             ld      (hl),e              ; Write LSB
             inc     hl
@@ -2858,7 +2857,7 @@ _2wp_bang:  ld      a,$A5
 ;******************************************************************************************
 ; ----> 2wpb!   Subroutine: Writes an 8-bit byte (E) to hardware Write-Protected RAM (HL).
 ;******************************************************************************************
-_2wpb_bang: ld      a,$A5
+two_wpb_bang: ld      a,$A5
             out     ($5B),a             ; Unlock NVRAM
             ld      (hl),e              ; Write byte
             ret
@@ -2876,7 +2875,7 @@ wp_bang:    ld      a,i                 ; \
             push    af                  ; | <DI, (Save interrupt state and disable)
             di                          ; /
             push    hl
-            call    _2wp_bang           ; Call 16-bit unlock/write
+            call    two_wp_bang          ; Call 16-bit unlock/write
             pop     hl
             pop     af                  ; \
             jp      po,wp_ei_skip       ; | EI>, (Restore previous interrupt state)
@@ -2896,7 +2895,7 @@ wpb_bang:   ld      a,i                 ; \
             push    af                  ; | <DI, (Save interrupt state and disable)
             di                          ; /
             push    hl
-            call    _2wpb_bang          ; Call 8-bit unlock/write
+            call    two_wpb_bang         ; Call 8-bit unlock/write
             pop     hl
             pop     af                  ; \
             jp      po,wpb_ei_skip      ; | EI>, (Restore previous interrupt state)
@@ -3031,7 +3030,7 @@ sin:        ld      d,$00               ; Clear D to make DE a clean 16-bit offs
 ;  M E MOV, H INX, M D MOV, XCHG, ( leave in HL )
 ;  L MUSPC Y STX, H MUSPC 1+ Y STX, ( store )   RET,
 ;##########################################################################################
-_PCJUMP:    ld      e,(hl)
+pcjump:    ld      e,(hl)
             inc     hl
             ld      d,(hl)
             ex      de,hl
@@ -3050,16 +3049,17 @@ _PCJUMP:    ld      e,(hl)
 portout:    ld      e,a
             ld      a,$17
             cp      c
-            jp      m,$0B53
+            jp      m,portout_done
             sub     $08
             cp      c
-            jp      p,$0B53
+            jp      p,portout_done
             ld      a,$18
             sub     c
             sub     (iy+$04)
             neg
             ld      c,a
             out     (c),e
+portout_done:
             xor     a
             ret
 
@@ -3068,16 +3068,19 @@ portout:    ld      e,a
 ;  7 A BIT, 0<>, IF, NEG, 7 A RES, THEN, RET,
 ;##########################################################################################
 babs:       bit     7,a
-            jp      z,$0B5E
+            jp      z,babs_done
             neg
             res     7,a
-            ret
+babs_done:  ret
 
 ;##########################################################################################
-; This code seems to be missing ??? Marked it for future reference
 ; CODE BABS H POP, L A MOV, babs CALL, A L MOV, H PUSH, NEXT
+;
+; The source contains this CODE definition, but the corresponding release-ROM
+; implementation is not present at this location.  Do not define _BABS with
+; EQU $ here: the next emitted routine is halfvols, and that alias would create
+; a false TERSE dictionary symbol.
 ;##########################################################################################
-_BABS       EQU     $
 
 ;##########################################################################################
 ; { BLOCK 0071 }
@@ -3086,15 +3089,16 @@ _BABS       EQU     $
 ; A ANA, B A MOV, 0<>, IF, RRC, RRC, 33 ANI, THEN,
 ; EXX, RET,
 ;##########################################################################################
-_HALFVOLS:  exx
+halfvols:  exx
             ld      b,a
             ld      a,(DEMOMODE)
             and     a
             ld      a,b
-            jp      z,$0B6D
+            jp      z,halfvols_done
             rrca
             rrca
             and     $33
+halfvols_done:
             exx
             ret
 
@@ -3106,15 +3110,16 @@ _HALFVOLS:  exx
 ;  A RAMBLEFLAG Y STX, ( stop ramble ) 1 MST Y MVIX,
 ;  THEN, THEN, RET,
 ;##########################################################################################
-_LIMITCOUNT:
+limitcount:
             ld  a,(iy+$10)
             or      a
-            jp      z,$0B84
+            jp      z,limitcount_done
             dec     a
             ld      (iy+$10),a
-            jp      nz,$0B84
+            jp      nz,limitcount_done
             ld      (iy+$0a),a
             ld      (iy+$2f),$01
+limitcount_done:
             ret
 
 ;##########################################################################################
@@ -3132,15 +3137,15 @@ _LIMITCOUNT:
 ;  EXX, RET,
 ; -->
 ;
-; >>>>> THIS DOES NOT MATCH THE CODE BELOW EXACTLY. ???
-; >>>>> THE INC BC DOESN'T SEEM TO BE HERE.
-; >>>>> ALSO, MUSPC SEEM TO BE ZERO - UNLESS IT IS AN EQUATE SET TO ZERO.
-;
+; ENDMUS is the one-byte music opcode/data item at $0B85.  The old raw
+; disassembly rendered its $03 byte as INC BC, which made emusic appear one
+; byte too early.  Existing callers target $0B86, confirming the boundary.
 ;##########################################################################################
-            inc     bc
-            ld      hl,$0000
+ENDMUS:     DB      $03
+
+emusic:     ld      hl,$0000
             add     hl,de
-            ld      bc,$0B85
+            ld      bc,ENDMUS
             ld      (hl),c
             inc     hl
             ld      (hl),b
@@ -3173,7 +3178,7 @@ _LIMITCOUNT:
 ;  B POP, L A MOV, portout CALL, H POP, 3 D LXI, D DAD, ( MUSPC )
 ;  A XRA, RET,
 ;##########################################################################################
-_RANDOMNOTES:
+randomnotes:
             push    hl
             ld      d,$00
             ld      e,(hl)
@@ -3202,20 +3207,20 @@ _RANDOMNOTES:
 ; SUBR QUITJUMP ( H DCX, 3 in A ) RET,
 ;##########################################################################################
 
-_LOADTIMER: ld      a,(hl)
+loadtimer: ld      a,(hl)
             ld      (iy+$2e),a
             inc     hl
             or      $01
             ret
 
-_CONTJUMP:  ld      e,(hl)
+contjump:  ld      e,(hl)
             inc     hl
             ld      d,(hl)
             ex      de,hl
             xor     a
             ret
 
-_QUITJUMP:  ret
+quitjump:  ret
 
 ;##########################################################################################
 ; SUBR QUITYET? ( QUIET ) MULTIPLE Y DCRX,
@@ -3223,7 +3228,7 @@ _QUITJUMP:  ret
 ;  ELSE, Y PUSHX, EXX, D POP, emusic CALL, 1 ORI, THEN, RET,
 ; -->
 ;##########################################################################################
-_QUITYET:   dec     (iy+$07)
+quityet:   dec     (iy+$07)
             jp      z,$0BE7
             ld      l,(iy+$02)
             ld      h,(iy+$03)
@@ -3232,7 +3237,7 @@ _QUITYET:   dec     (iy+$07)
             push    iy
             exx
             pop     de
-            call    $0B86
+            call    emusic
             or      $01
             ret
 
@@ -3249,7 +3254,8 @@ _QUITYET:   dec     (iy+$07)
 ;  M A MOV, H INX, A RAMBLETIMER Y STX,
 ;  A TIMEBASE Y STX, 1 A MVI, A RAMBLEFLAG Y STX, A DCR, RET,
 ;##########################################################################################
-_RAMBLIN:   xor     a
+ramblin:   xor     a
+ramble_stores:
             ld      (iy+$09),a
             ld      a,(hl)
             inc     hl
@@ -3273,8 +3279,8 @@ _RAMBLIN:   xor     a
 ; SUBR RAMPIN' 1 A MVI, RAMBLESTORES JMP,
 ; -->
 ;##########################################################################################
-_RAMPIN:    ld      a,$01
-            jp      $0BF2
+rampin:    ld      a,$01
+            jp      ramble_stores
 
 ;##########################################################################################
 ; { BLOCK 0075 }
@@ -3284,7 +3290,7 @@ _RAMPIN:    ld      a,$01
 ;  M A MOV, H INX, A MOVALUE Y STX,
 ;  A OUTP, A XRA, RET
 ;##########################################################################################
-            ld      a,(iy+$04)
+mastart:    ld      a,(iy+$04)
             sub     $08
             ld      c,a
             ld      a,(hl)
@@ -3297,7 +3303,7 @@ _RAMPIN:    ld      a,$01
 ;##########################################################################################
 ; SUBR RAMBLE-ON 1 A MVI, A RAMBLEFLAG Y STX, A XRA, RET,
 ;##########################################################################################
-            ld      a,$01
+ramble_on:  ld      a,$01
             ld      (iy+$0a),a
             xor     a
             ret
@@ -3305,10 +3311,16 @@ _RAMPIN:    ld      a,$01
 ;##########################################################################################
 ; SUBR RAMBLE-OFF A XRA, A RAMBLEFLAG Y STX, RET,
 ;##########################################################################################
-            xor     a
+ramble_off: xor     a
             ld      (iy+$0a),a
             ret
 
+;##########################################################################################
+; SUBR LIMITRAMBLE ( set up LIMCOUNTER )
+;  1 A MVI, A RAMBLEFLAG Y STX, M A MOV, H INX,
+;  A LIMCOUNTER Y STX, A XRA, RET,
+;##########################################################################################
+limitramble:
             ld      a,$01
             ld      (iy+$0a),a
             ld      a,(hl)
@@ -3318,11 +3330,11 @@ _RAMPIN:    ld      a,$01
             ret
 
 ;##########################################################################################
-; SUBR LIMITRAMBLE ( set up LIMCOUNTER )
-;  1 A MVI, A RAMBLEFLAG Y STX, M A MOV, H INX,
-;  A LIMCOUNTER Y STX, A XRA, RET,
+; SUBR STEPMOVIN' M A MOV, H INX, A STOPSTEPS Y STX,
+;  M A MOV, H INX, A BIGOFASTEP Y STX, M A MOV, H INX,
+;  A STEPTIMEBASE Y STX, A STEPTIMER Y STX, A XRA, RET,
 ;##########################################################################################
-            ld      a,(hl)
+stepmovin:  ld      a,(hl)
             inc     hl
             ld      (iy+$1a),a
             ld      a,(hl)
@@ -3341,26 +3353,35 @@ _RAMPIN:    ld      a,$01
 ;  0F0 ANI, E ORA, H INX, portout JMP,
 ; -->
 ;##########################################################################################
-            rrca
+abvolin:    rrca
             ld      c,a
             ld      a,(hl)
             and     $0F
-            call    $0B5F
+            call    halfvols
             ld      e,a
             ld      a,(hl)
             and     $F0
-            call    $0B5F
+            call    halfvols
             and     $F0
             or      e
             inc     hl
             jp      portout
 
 ;##########################################################################################
-; SUBR STEPMOVIN' M A MOV, H INX, A STOPSTEPS Y STX,
-;  M A MOV, H INX, A BIGOFASTEP Y STX, M A MOV, H INX,
-;  A STEPTIMEBASE Y STX, A STEPTIMER Y STX, A XRA, RET,
+; { BLOCK 0076 }
+; ( OPCODES 0C-0F )
+;
+; The source comments in the earlier disassembly were displaced by one routine.
+; Block 0079's OPADDRESSES table fixes the entry points unambiguously:
+;   $0C69 LOWMOVIN', $0C7D HIGHMOVIN', $0C91 TBMOVIN', $0CA5 NOMOVIN'.
 ;##########################################################################################
-            ld      a,(hl)
+
+;##########################################################################################
+; SUBR LOWMOVIN' M A MOV, H INX, A STOPLOWLIM Y STX,
+;  M A MOV, H INX, A LOWSTEP Y STX, M A MOV, H INX, A LOW# Y STX,
+;  A LOWCOUNTER Y STX, A XRA, RET,
+;##########################################################################################
+lowmovin:   ld      a,(hl)
             inc     hl
             ld      (iy+$1e),a
             ld      a,(hl)
@@ -3374,28 +3395,11 @@ _RAMPIN:    ld      a,$01
             ret
 
 ;##########################################################################################
-; { BLOCK 0076 }
-; ( OPCODES 0C-0F )
-; SUBR NOMOVIN' M A MOV, H INX, A NOSTOP Y STX, M A MOV, H INX,
-;  A NOSTEP Y STX, M A MOV, H INX, A NOTIMER Y STX,
-;  A NOTIMEBASE Y STX, SOUNDBOX Y C LDX, C DCR,
-;  M A MOV, H INX, A NOVALUE Y STX, A OUTP, A XRA, RET,
-; -->
+; SUBR HIGHMOVIN' M A MOV, H INX, A STOPHIGHLIM Y STX,
+;  M A MOV, H INX, A HIGHSTEP Y STX, M A MOV, H INX,
+;  A HIGH# Y STX, A HIGHCOUNTER Y STX, A XRA, RET,
 ;##########################################################################################
-
-; Is the above comments out of place???
-
-
-
-
-
-
-;##########################################################################################
-; SUBR LOWMOVIN' M A MOV, H INX, A STOPLOWLIM Y STX,
-;  M A MOV, H INX, A LOWSTEP Y STX, M A MOV, H INX, A LOW# Y STX,
-;  A LOWCOUNTER Y STX, A XRA, RET,
-;##########################################################################################
-            ld      a,(hl)
+highmovin:  ld      a,(hl)
             inc     hl
             ld      (iy+$22),a
             ld      a,(hl)
@@ -3409,11 +3413,11 @@ _RAMPIN:    ld      a,$01
             ret
 
 ;##########################################################################################
-; SUBR HIGHMOVIN' M A MOV, H INX, A STOPHIGHLIM Y STX,
-;  M A MOV, H INX, A HIGHSTEP Y STX, M A MOV, H INX,
-;  A HIGH# Y STX, A HIGHCOUNTER Y STX, A XRA, RET,
+; SUBR TBMOVIN' M A MOV, H INX, A STOPTB Y STX, M A MOV, H INX,
+;  A TBSTEP Y STX, M A MOV, H INX, A TBTB Y STX, A TBTIMER Y STX,
+;  A XRA, RET,
 ;##########################################################################################
-            ld      a,(hl)
+tbmovin:    ld      a,(hl)
             inc     hl
             ld      (iy+$11),a
             ld      a,(hl)
@@ -3427,11 +3431,13 @@ _RAMPIN:    ld      a,$01
             ret
 
 ;##########################################################################################
-; SUBR TBMOVIN' M A MOV, H INX, A STOPTB Y STX, M A MOV, H INX,
-;  A TBSTEP Y STX, M A MOV, H INX, A TBTB Y STX, A TBTIMER Y STX,
-;  A XRA, RET,
+; SUBR NOMOVIN' M A MOV, H INX, A NOSTOP Y STX, M A MOV, H INX,
+;  A NOSTEP Y STX, M A MOV, H INX, A NOTIMER Y STX,
+;  A NOTIMEBASE Y STX, SOUNDBOX Y C LDX, C DCR,
+;  M A MOV, H INX, A NOVALUE Y STX, A OUTP, A XRA, RET,
+; -->
 ;##########################################################################################
-            ld      a,(hl)
+nomovin:    ld      a,(hl)
             inc     hl
             ld      (iy+$15),a
             ld      a,(hl)
@@ -3477,7 +3483,7 @@ mcmovin:    rrca
             ld      e,a
             ld      a,(hl)
             and     $0F
-            call    $0B5F
+            call    halfvols
             or      e
             inc     hl
             ld      (iy+$2b),a
@@ -3524,11 +3530,11 @@ panlimitcountin:    ret                 ; Only a ret here
 ;        1 VOLTIMER Y MVIX, A XRA, RET,
 ;##########################################################################################
 volmovin:   ld      a,(hl)
-            call    $0B5F
+            call    halfvols
             inc     hl
             ld      (iy+$26),a
             ld      a,(hl)
-            call    $0B5F
+            call    halfvols
             inc     hl
             ld      (iy+$27),a
             ld      a,(hl)
@@ -3617,7 +3623,10 @@ musicin:    ret
 ;
 ;##########################################################################################
 
-                ; OUT OF PLACE??? CAN'T MATCH TO CODE.
+                ; RE NOTE: Block 0080 declares +-disp., 15MOD, and UP-AN-OUT,
+                ; but no byte-exact implementation has been identified in the
+                ; Program 2 release image. Keep the source declarations as
+                ; provenance; do not attach these names to unrelated ROM bytes.
 
 ;##########################################################################################
 
@@ -3635,62 +3644,48 @@ musicin:    ret
 ;       -->
 ;
 ;##########################################################################################
-                ; OUT OF PLACE??? CAN'T MATCH TO CODE.
+                ; RE NOTE: Block 0081 declares PANLIMIT, but no byte-exact
+                ; implementation has been identified in the Program 2 release
+                ; image. The name remains intentionally unattached rather than
+                ; inferred from nearby native code.
 
 
 
 
-            xor     l
-            dec     bc
-            ret     z
-
-
-            dec     bc
-            ret     nc
-
-
-            dec     bc
-            sub     $0B
-            rst     $10
-            dec     bc
-            pop     af
-            dec     bc
-            inc     de
-            inc     c
-            dec     de
-            dec     c
-            daa
-            inc     c
-            ld      l,$0C
-
-            inc     sp
-            inc     c
-            ccf
-            inc     c
-            ld      l,c
-            inc     c
-            ld      a,l
-            inc     c
-            sub     c
-            inc     c
-            and     l
-            inc     c
-            jr      $0D4A
-            call    nz,$C40C
-            inc     c
-            call    nz,$C40C
-            inc     c
-            rrc     h
-            ld      d,e
-            inc     c
-            rst     $18
-            inc     c
-            jp      (hl)
-            inc     c
-            jp      pe,$EB0C
-            inc     c
-            dec     bc
-            dec     c
+;******************************************************************************************
+; OPADDRESSES is the music interpreter's opcode vector table from Block 0079.
+; The 56 bytes here were previously disassembled as plausible-looking Z80 instructions,
+; but they are 28 little-endian routine pointers for opcodes $00 through $1B.
+;******************************************************************************************
+OPADDRESSES:
+            DW      randomnotes         ; $00
+            DW      loadtimer           ; $01
+            DW      contjump            ; $02
+            DW      quitjump            ; $03
+            DW      quityet             ; $04
+            DW      ramblin             ; $05
+            DW      rampin              ; $06
+            DW      musicin             ; $07
+            DW      ramble_on           ; $08
+            DW      ramble_off          ; $09
+            DW      limitramble         ; $0A
+            DW      stepmovin           ; $0B
+            DW      lowmovin            ; $0C
+            DW      highmovin           ; $0D
+            DW      tbmovin             ; $0E
+            DW      nomovin             ; $0F
+            DW      mastart             ; $10
+            DW      opport              ; $11
+            DW      opport              ; $12
+            DW      opport              ; $13
+            DW      opport              ; $14
+            DW      mcmovin             ; $15
+            DW      abvolin             ; $16
+            DW      noiseport           ; $17
+            DW      soundmovin          ; $18
+            DW      panlimitcountin     ; $19
+            DW      volmovin            ; $1A
+            DW      mohittin            ; $1B
             xor     a
             cp      (iy+$2f)
             jp      z,$0D5C
@@ -3754,7 +3749,7 @@ musicin:    ret
             ld      (iy+$24),$00
             ld      (iy+$0b),a
             ld      (iy+$25),c
-            call    $0B6F
+            call    limitcount
             ld      a,(iy+$09)
             cp      $03
             jp      nz,$0DF1
@@ -3786,7 +3781,7 @@ musicin:    ret
             ld      (iy+$20),$00
             ld      (iy+$0c),a
             ld      (iy+$21),c
-            call    $0B6F
+            call    limitcount
             ld      a,(iy+$09)
             cp      $02
             jp      nz,$0E42
@@ -3859,7 +3854,7 @@ musicin:    ret
             jp      nz,$0EDD
             ld      a,(iy+$0d)
             ld      e,a
-            call    $0B55
+            call    babs
             add     a,(iy+$1b)
             cp      (iy+$1a)
             jp      z,$0ED3
@@ -3916,7 +3911,7 @@ musicin:    ret
             exx
             ld      hl,$0F55
             push    hl
-            ld      hl,$0D1C
+            ld      hl,OPADDRESSES
             rlca
             ld      e,a
             ld      d,$00
@@ -3953,8 +3948,9 @@ musicin:    ret
             ret
 
 ;*******************************************************************
+; Source name recovered from Block 0248: busaround.
 
-            ld      a,(MUSICFLAG)
+busaround:  ld      a,(MUSICFLAG)
             or      a
             jp      z,$0F97
             push    iy
@@ -3980,8 +3976,10 @@ musicin:    ret
             ret
 
 ;*******************************************************************
+; Low-level music control SUBRs used by the CODE wrappers below.
+; Source names are bmusic, pmusic, mmusic, and mpmusic.
 
-            ld      a,(iy+$08)
+bmusic:     ld      a,(iy+$08)
             or      a
             jp      nz,$0FC1
             ld      (iy+$2f),$01
@@ -3990,17 +3988,19 @@ musicin:    ret
             ld      (iy+$07),a
             jp      $0F9F
             ret
-            ld      (iy+$2f),$01
+
+pmusic:     ld      (iy+$2f),$01
             push    iy
             exx
             pop     de
-            call    $0B86
+            call    emusic
             ld      a,$01
             ld      (iy+$2f),a
             ld      (iy+$07),a
             ld      (iy+$08),a
             jp      $0F9F
-            ld      a,(iy+$08)
+
+mmusic:     ld      a,(iy+$08)
             or      a
             jp      nz,$0FEF
             ld      (iy+$2f),$01
@@ -4008,11 +4008,12 @@ musicin:    ret
             ld      (iy+$07),e
             jp      $0F9F
             ret
-            ld      (iy+$2f),$01
+
+mpmusic:    ld      (iy+$2f),$01
             push    iy
             exx
             pop     de
-            call    $0B86
+            call    emusic
             ld      a,$01
             ld      (iy+$2f),a
             ld      (iy+$08),a
@@ -4029,7 +4030,7 @@ _EMUSIC:    exx                         ; TERSE CODE; first music processor arra
             ld      hl,$0004
             add     hl,de               ; $D0B5
             ld      (hl),$18
-            call    $0B86
+            call    emusic
             DW      _DSPATCH
 
 ;******************************************************************************************
@@ -4037,16 +4038,16 @@ _EMUSIC:    exx                         ; TERSE CODE; first music processor arra
 _BMUSIC:    pop     hl
             push    iy
             ld      iy,$D0B1
-            call    $0FAC
+            call    bmusic
             pop     iy
             DW      _DSPATCH
 
 ;******************************************************************************************
 
-PMUSIC:     pop     hl
+_PMUSIC:    pop     hl
             push    iy
             ld      iy,$D0B1
-            call    $0FC2
+            call    pmusic
             pop     iy
             DW      _DSPATCH
 
@@ -4056,7 +4057,7 @@ _MMUSIC:    pop     hl
             pop     de
             push    iy
             ld      iy,$D0B1
-            call    $0FDB
+            call    mmusic
             pop     iy
             DW      _DSPATCH
 
@@ -4066,7 +4067,7 @@ _MPMUSIC:   pop     hl
             pop     de
             push    iy
             ld      iy,$D0B1
-            call    $0FF0
+            call    mpmusic
             pop     iy
             DW      _DSPATCH
 
@@ -4087,7 +4088,7 @@ _E2MUSIC:   exx
             ld      hl,$0004
             add     hl,de
             ld      (hl),$58
-            call    $0B86
+            call    emusic
             DW      _DSPATCH
 
 ;##########################################################################################
@@ -4097,24 +4098,22 @@ _E2MUSIC:   exx
 _B2MUSIC:   pop     hl
             push    iy
             ld      iy,$D0E1
-            call    $0FAC
+            call    bmusic
             pop     iy
             DW      _DSPATCH
 
 ;##########################################################################################
-; ???
 ;   CODE P2MUSIC H POP, Y PUSHX,
 ;    0 MUSIC-BARRAY-2 Y LXIX, pmusic CALL, Y POPX, NEXT
 ;##########################################################################################
-P2MUSIC:    pop     hl
+_P2MUSIC:   pop     hl
             push    iy
             ld      iy,$D0E1
-            call    $0FC2
+            call    pmusic
             pop     iy
             DW      _DSPATCH
 
 ;##########################################################################################
-; ???
 ;   CODE M2MUSIC H POP, D POP, Y PUSHX,
 ;    0 MUSIC-BARRAY-2 Y LXIX, mmusic CALL, Y POPX, NEXT
 ;##########################################################################################
@@ -4122,12 +4121,11 @@ _M2MUSIC:   pop     hl
             pop     de
             push    iy
             ld      iy,$D0E1
-            call    $0FDB
+            call    mmusic
             pop     iy
             DW      _DSPATCH
 
 ;##########################################################################################
-; ???
 ;   CODE MP2MUSIC H POP, D POP, Y PUSHX,
 ;    0 MUSIC-BARRAY-2 Y LXIX, mpmusic CALL, Y POPX, NEXT
 ;##########################################################################################
@@ -4135,7 +4133,7 @@ _MP2MUSIC:  pop     hl
             pop     de
             push    iy
             ld      iy,$D0E1
-            call    $0FF0
+            call    mpmusic
             pop     iy
             DW      _DSPATCH
 
@@ -4190,7 +4188,7 @@ _BZERO:     pop     hl
 ;
 ;******************************************************************************************
 
-                ; Compile-time vocabulary selection; no emitted runtime body.
+                ; No code. DEFINITIONS???
 
 ;******************************************************************************************
 ;
@@ -4226,9 +4224,7 @@ _BZERO:     pop     hl
 ; CC? IFTRUE HERE there ! DP ! TERSE DEFINITIONS IFEND
 ;******************************************************************************************
 
-                ; PRIM and ENDPRIM are compile-time helpers. They construct a
-                ; length-prefixed speech primitive and patch its leading size
-                ; byte, so no standalone runtime code is expected here.
+                ; No code. NOT UNDERSTOOD???
 
 ;##########################################################################################
 ; SUBR speaklink .REL 10 IN, 80 ANI, RZ,
@@ -4261,8 +4257,8 @@ speaklink:  in      a,($10)
 ;##########################################################################################
 speak:      in      a,($13)
             and     $08
-            jp      nz,speaklink        ; Resident Votrax queue path
-            jp      $C000               ; Foreign X11 speech provider entry
+            jp      nz,speaklink
+            jp      $C000
 
 ;########################################################################################
 ; CODE SPEAK D POP, speak CALL, NEXT
@@ -4291,8 +4287,8 @@ _SPEAK:     pop     de
 ;  A DCR, ONHOLD STA, THEN, RET, -->
 ;##########################################################################################
 
-; Not sure about the label name. Is it "phone"???
-L10E7:      ld      a,($D111)
+; GORFOS Block 0102 names this interrupt helper PHONE.
+phone:      ld      a,($D111)
             or      a
             jp      nz,L1158            ;???
 
@@ -4382,6 +4378,11 @@ L115C:      ret
 ;       3C pE1    3D AW    3E PA1  ( 3F  STOP )
 ;
 ;       { : HI } 80 OR { ; } { : UP } 40 OR { ; }
+;
+; RE NOTE: The release ROM is authoritative for the DB records below. A source-to-ROM
+; audit found that some later TALK PRIM printout comments omit $40 (UP) inflection bits
+; carried by the released bytes, and a few source tokens are ambiguous. Preserve the
+; release DB bytes even when a printed phoneme line is not byte-exact.
 ;
 ;******************************************************************************************
 ;##########################################################################################
@@ -4740,7 +4741,7 @@ AM_TALK:    ld      a,(AMBUSY)          ; Still playing FX / Talk from before
             ld      ($D111),a
             ld      hl,AM_FX
             ld      iy,$D0B1
-            call    $0FC2
+            call    pmusic
 amtalk0:    ld      a,r
             and     $03
             rlca
@@ -4868,7 +4869,7 @@ clear1k:    ld      a,$20
 ; DECIMAL -->
 ;******************************************************************************************
 
-_CODE:      ld      de,$4000
+_CL:        ld      de,$4000
 CLLL:       call    clear1k
             ld      a,d
             add     a,$04
@@ -4902,15 +4903,14 @@ _XY:        DB      _ENTER
 
             DW      _RETURN
 
-_DOIT:      pop     hl                  ; TERSE's EXECUTE-like indirect call
-            jp      (hl)
+            DW      $E9E1
             DW      _DSPATCH
 ;******************************************************************************************
 ; {Block 105 } ... Continued
 ; INIT GRAPHICS 1 8 OUTP 204 10 OUTP 43 9 OUTP ;
 ;******************************************************************************************
 
-_INIT:
+W_1476:
             DB      _ENTER
             DW      DONULL		; do nothing ?
             DW      _1                  ; OUT $01 to port $08 (Hi-Res)
@@ -5756,7 +5756,7 @@ zeroscore0: call    wpb_bang            ; Write byte to protected memory
             push    ix
             push    iy
             call    $0F64
-            call    L10E7               ; Call speech routine ???
+            call    phone               ; Service queued Votrax phonemes
             ld      hl,$D090
             ld      a,(hl)
             and     a
@@ -5850,7 +5850,7 @@ zeroscore0: call    wpb_bang            ; Write byte to protected memory
             ld      a,$B4
             ld      ($D090),a
             ret
-            call    $1A60
+_BARK:      call    $1A60            ; Source-proven dictionary entry used by SHOW4P
             DW      _DSPATCH
 ;******************************************************************************************
             bit     7,(ix+$00)
@@ -7586,7 +7586,7 @@ GORF_UNK6:
             daa
             ld      hl,$27A1
             ld      iy,$D0E1
-            jp      $0FAC
+            jp      bmusic
             ld      a,(PLAYERUP)
             ld      hl,P1FBCTR
             and     a
@@ -8125,7 +8125,7 @@ GORF_UNK6:
             call    $2A7F
             ld      hl,$2669
             ld      iy,$D0B1
-            jp      $0FAC
+            jp      bmusic
             ld      bc,$0E15
             ld      ix,($D95B)
             bit     7,(ix+$00)
@@ -8680,6 +8680,7 @@ GORF_UNK6:
             ret
             xor     d
             cp      a
+creditcheck:
             call    $1A60
             ld      a,(DEMOMODE)
             and     a
@@ -10326,7 +10327,7 @@ _STARTGAME:
 ;
 ;******************************************************************************************
 
-            ld      l,(ix+$1f)
+posrel:     ld      l,(ix+$1f)
             ld      h,(ix+$20)
             push    hl
             pop     iy
@@ -10360,14 +10361,14 @@ _STARTGAME:
 ;
 ;******************************************************************************************
 
-            call    $1C67
+fwrite:     call    $1C67
             bit     5,(ix+$00)
             jp      nz,$391C
             call    $14BF
             jp      $3920
             res     5,(ix+$00)
             call    $1C4B
-            call    $38DC
+            call    posrel
             bit     6,(ix+$00)
             jp      nz,$3933
             call    $1492
@@ -10398,8 +10399,7 @@ _STARTGAME:
 ;
 ;******************************************************************************************
 
-
-            push    ix
+_FSTART:    push    ix
             pop     hl
             push    iy
             pop     de
@@ -10445,7 +10445,7 @@ _STARTGAME:
             ld      (ix+$13),l
             ld      (ix+$14),h
             call    $1F74
-            ld      hl,$390C
+            ld      hl,fwrite
             ld      (ix+$05),l
             ld      (ix+$06),h
             set     7,(ix+$09)
@@ -10481,15 +10481,16 @@ _STARTGAME:
 ;
 ;******************************************************************************************
 
-            push    de
+plotrent:    push    de
             ld      (ix+$13),l
             ld      (ix+$14),h
             ld      c,(ix+$0f)
             ld      b,(ix+$10)
             ld      hl,$0000
+plotrent_tbcd:
             add     hl,bc
             dec     a
-            jr      nz,$39D8
+            jr      nz,plotrent_tbcd
             ex      de,hl
             ld      a,(ix+$0d)
             and     $C0
@@ -10497,20 +10498,23 @@ _STARTGAME:
             ld      b,(ix+$0e)
             and     a
             sbc     hl,bc
-            jp      p,$39F7
+            jp      p,plotrent_yeslok
             add     hl,de
-            jp      p,$39F7
+            jp      p,plotrent_yeslok
             ld      h,b
             ld      l,c
             and     a
             sbc     hl,de
-            jr      $39FB
+            jr      plotrent_notlok
+plotrent_yeslok:
             pop     hl
             xor     a
-            jr      $39FF
+            jr      plotrent_stufx
+plotrent_notlok:
             pop     de
             ld      a,$01
             and     a
+plotrent_stufx:
             ld      (ix+$0d),l
             ld      (ix+$0e),h
             ret
@@ -10534,7 +10538,7 @@ _STARTGAME:
 ;
 ;******************************************************************************************
 
-            bit     5,(ix+$00)
+rekami:     bit     5,(ix+$00)
             jr      nz,$3A11
             call    $14BF
             jr      $3A15
@@ -10556,9 +10560,9 @@ _STARTGAME:
             ld      c,(iy+$13)
             ld      b,(iy+$14)
             add     hl,bc
-            call    $39C8
+            call    plotrent
             jr      nz,$3A53
-            ld      hl,$390C
+            ld      hl,fwrite
             ld      (ix+$05),l
             ld      (ix+$06),h
             set     7,(ix+$09)
@@ -10593,12 +10597,13 @@ _STARTGAME:
 ;
 ;******************************************************************************************
 
-            and     a
+aabs:       and     a
             ret     p
             cpl
             inc     a
             ret
-            push    hl
+
+ktarget:     push    hl
             ld      a,(ix+$14)
             srl     a
             srl     a
@@ -10625,7 +10630,7 @@ _STARTGAME:
             cpl
             ld      (ix+$18),a
             ld      a,(ix+$17)
-            call    $3A6C
+            call    aabs
             and     $0E
             cp      $06
             jp      c,$3AB0
@@ -10784,15 +10789,17 @@ _STARTGAME:
 ;    48 ADI, CMA, A VDXL X STX, 0FF VDXH X MVIX, RET,
 
 
-            djnz    $3B8E
-            ld      e,a
+            DB      $10                 ; trailing byte of the preceding data block
+
+randomysx:   ld      a,r                  ; Block 0245: LDAR ($ED,$5F)
             and     $7F
             add     a,$20
             ld      (ix+$14),a
             ld      a,($D08A)
             cp      $0A
-            jr      c,$3BB2
+            jr      c,randomysx_scaled
             ld      a,$0A
+randomysx_scaled:
             rlca
             rlca
             add     a,$48
@@ -10805,14 +10812,15 @@ _STARTGAME:
 ;    0<>, IF, XCHG, THEN, RET,
 
 
-            ld      e,(hl)
+rrk:         ld      e,(hl)
             inc     hl
             ld      d,(hl)
             inc     hl
             ld      a,($D948)
             and     a
-            jr      z,$3BCA
+            jr      z,rrk_done
             ex      de,hl
+rrk_done:
             ret
 
 ;    SUBR FREEFLOW M E MOV, H INX, M D MOV, H INX, HARDNESS LDA,
@@ -10820,7 +10828,7 @@ _STARTGAME:
 ;    A C MOV,
 ;    INVADERSLEFT LDA, C CMP, CY, IF, XCHG, THEN, RET,
 
-            ld      e,(hl)
+freeflow:    ld      e,(hl)
             inc     hl
             ld      d,(hl)
             inc     hl
@@ -10828,13 +10836,15 @@ _STARTGAME:
             rlca
             rlca
             cp      $18
-            jr      c,$3BDA
+            jr      c,freeflow_cap_done
             ld      a,$18
+freeflow_cap_done:
             ld      c,a
             ld      a,($D94B)
             cp      c
-            jr      nc,$3BE2
+            jr      nc,freeflow_done
             ex      de,hl
+freeflow_done:
             ret
 
 ;    .ABS
@@ -10843,15 +10853,10 @@ _STARTGAME:
 ;    SUBR SKILDDY HARDNESS LDA, A ANA, RZ, -1 A MVI,
 ;    A VDDXL X STX, A VDDXH X STX, RET, DECIMAL -->
 
-            ex      af,af'
-            xor     $3A
-            inc     h
-            and     b
-            dec     sp
-            ld      b,$01
-            jr      nz,$3BED
-            cp      $10
-            ld      a,($D08A)
+RETAT:      DB      $08,$EE,$3A,$24,$A0,$3B,$06,$01,$20,$00,$FE,$10
+            ; Source: ASM GOTOP ACALL RANDOMYSX ASMCALL 1 SWAIT $FE 0 SETS ARET
+
+skilddy:     ld      a,($D08A)
             and     a
             ret     z
             ld      a,$FF
@@ -10962,25 +10967,25 @@ _STARTGAME:
 ;
 ;******************************************************************************************
 
-            pop     de
+_SCROLL:    pop     de
             push    bc
             push    iy
             push    ix
             ld      c,e
             ld      b,d
-            push    bc
+scroll_osl: push    bc                  ; LABEL OSL
             ld      de,$0050
             ld      b,$C0
             ld      hl,$404F
-            ld      a,(hl)
+scroll_csl: ld      a,(hl)              ; LABEL CSL
             and     $F0
             ld      (hl),a
             add     hl,de
-            djnz    $3C73
+            djnz    scroll_csl
             ld      de,$4000
             ld      a,$02
             out     ($0C),a
-            di
+scroll_swll: di                         ; LABEL SWLL
             ld      a,$24
             out     (PBSTAT),a
             ld      a,e
@@ -11002,14 +11007,14 @@ _STARTGAME:
             ld      a,d
             add     a,$04
             ld      d,a
-            jp      p,$3C81
-            call    $2ED8
-            call    $0F7E
+            jp      p,scroll_swll
+            call    creditcheck
+            call    busaround
             pop     bc
             dec     bc
             ld      a,b
             or      c
-            jr      nz,$3C6A
+            jr      nz,scroll_osl
             pop     ix
             pop     iy
             pop     bc
@@ -11027,7 +11032,7 @@ _STARTGAME:
 ;    DECIMAL -->
 ;
 ;******************************************************************************************
-            exx
+_LITERANK:  exx
             ld      bc,$0016
             in      a,(c)
             ld      a,b
@@ -11703,49 +11708,39 @@ showport:   exx
 ;    : SHOW4P BARK 4000 10 showport
 ;    3800 11 showport 3000 12 showport 2800 13 showport ;
 
-            rst     $08
-            ld      h,(hl)
-            ld      a,(de)
-            ld      l,l
-            nop
-            nop
-            ld      b,b
-            halt
-            nop
-            djnz    $3FDD
-            ccf
-            ld      l,l
-            nop
-            nop
-            jr      c,$4006
-            nop
-            ld      de,$3F53
-            ld      l,l
-            nop
-            nop
-            jr      nc,$400F
-            nop
-            ld      (de),a
-            ld      d,e
-            ccf
-            ld      l,l
-            nop
-            nop
-            jr      z,$4018
-            nop
-            inc     de
-            ld      d,e
-            ccf
-            ld      h,c
-            nop
+; SHOW4P compiles BARK as the dictionary entry at $1A66, now labeled at
+; its actual implementation rather than kept as a numeric/equate-only cell.
 
+_SHOW4P:    DB      _ENTER
+            DW      _BARK
+            DW      _LIT
+            DW      $4000
+            DW      _LITbyte
+            DB      $10
+            DW      showport
+            DW      _LIT
+            DW      $3800
+            DW      _LITbyte
+            DB      $11
+            DW      showport
+            DW      _LIT
+            DW      $3000
+            DW      _LITbyte
+            DB      $12
+            DW      showport
+            DW      _LIT
+            DW      $2800
+            DW      _LITbyte
+            DB      $13
+            DW      showport
+            DW      _RETURN
 
 ;    { Block 254 Continued }
 ;    CODE sumup EXX, D POP, E A MOV, RLC, RLC, RLC, RLC, A H MOV,
 ;    0 L MVI, 1000 D LXI, 0 B LXI, BEGIN, M A MOV, C ADD, A C MOV,
 ;    H INX, D DCX, D A MOV, E ORA, 0=, END, C INR, B PUSH, EXX, NEXT
 
-            exx
+sumup:      exx
             pop     de
             ld      a,e
             rlca
@@ -11756,14 +11751,14 @@ showport:   exx
             ld      l,$00
             ld      de,$1000
             ld      bc,$0000
-            ld      a,(hl)
+sumup_loop: ld      a,(hl)
             add     a,c
             ld      c,a
             inc     hl
             dec     de
             ld      a,d
             or      e
-            jp      nz,$3FB8
+            jp      nz,sumup_loop
             inc     c
             push    bc
             exx
@@ -11777,50 +11772,30 @@ showport:   exx
 ;    SHOW4P ;
 ;    -->
 
-            ld      b,c
-            ld      b,d
-            ld      b,e
-            ld      b,h
-            nop
-            nop
-            nop
-            nop
-            ld      b,l
-            ld      b,(hl)
-            ld      b,a
-            ld      c,b
-            ld      e,b
+ROMCHARS:   DB      $41,$42,$43,$44,$00,$00,$00,$00
+            DB      $45,$46,$47,$48,$58
 
 ;    { Block 254 Continued }
 ;    : CKCHIP DUP sumup IF ROMCHARS B@ 428 SWAP cpost THEN DROP
 ;    SHOW4P ;
 ;    -->
 
-            rst     $08
-            and     h
-            nop
-            xor     b
-            ccf
-            jp      pe,$EB03
-            ccf
-            adc     a,b
-            nop
-            rst     $00
-            ccf
-            ret     p
-            nop
-            ld      l,l
-            nop
-            jr      z,$3FEB
-            adc     a,$00
-            ld      (hl),d
-            add     hl,bc
-            or      c
-            nop
-            ld      a,a
-            ccf
-            ld      h,c
-            nop
+_CKCHIP:    DB      _ENTER
+            DW      _DUP
+            DW      sumup
+            DW      _0BRANCH
+            DW      ckchip_then
+            DW      _BARRAY
+            DW      ROMCHARS
+            DW      _Bat
+            DW      _LIT
+            DW      $0428
+            DW      _SWAP
+            DW      _CPOST
+ckchip_then:
+            DW      _DROP
+            DW      _SHOW4P
+            DW      _RETURN
 ;*****************************************************************************
 ; Free Parking... (Filler bytes)
 ;*****************************************************************************
@@ -11839,10 +11814,11 @@ showport:   exx
 
             ORG     $8000
 
-ASTRO_BATTLES_MODULE:
-            DB      $A5                 ; Mission module marker
-            DW      _ASTRO_BATTLES_MAIN
-            DW      _ASTRO_BATTLES_ATTRACT
+L8000:      and     l
+            ld      h,e
+            adc     a,d
+            add     a,(hl)
+            adc     a,d
 ;*******************************************************************************
 ; ASTRO_BATTLES_ALIEN_A_1
 ; 2 bytes/row = 8 pixels wide, 8 rows
@@ -13848,8 +13824,7 @@ ASTRO_BATTLES_INVADER_BULLET_2:
             inc     (hl)
             ld      h,c
             nop
-_ASTRO_BATTLES_MAIN:
-            DB      _ENTER
+            rst     $08
             sbc     a,a
             add     a,a
             ld      (hl),$89
@@ -13878,8 +13853,7 @@ _ASTRO_BATTLES_MAIN:
             adc     a,c
             ld      h,c
             nop
-_ASTRO_BATTLES_ATTRACT:
-            DB      _ENTER
+            rst     $08
             sbc     a,a
             add     a,a
             ld      l,$81
@@ -13948,11 +13922,10 @@ _ASTRO_BATTLES_ATTRACT:
             jr      z,$8B06
             ld      h,c
             nop
-            DB      $E4                 ; Byte preceding the module header
-LASER_ATTACK_MODULE:
-            DB      $A5                 ; Mission module marker
-            DW      _LASER_ATTACK_MAIN
-            DW      _LASER_ATTACK_ATTRACT
+            call    po,$A7A5
+            sub     c
+            rst     $08
+            sub     c
 ;*******************************************************************************
 ; LASER_ATTACK_RED_WINGED_BUG
 ; 3 bytes/row = 12 pixels wide, 11 rows
@@ -14807,7 +14780,7 @@ LASER_ATTACK_BUG_SHIP_COMPACT:
             call    $900C
             ld      hl,$8BA0
             ld      iy,$D0E1
-            call    $0FC2
+            call    pmusic
             pop     de
             jp      $906C
             xor     a
@@ -15020,8 +14993,7 @@ LASER_ATTACK_BUG_SHIP_COMPACT:
             adc     a,e
             jr      z,$9207
             nop
-_LASER_ATTACK_MAIN:
-            DB      _ENTER
+            rst     $08
             ld      (hl),$91
             xor     h
             adc     a,h
@@ -15056,8 +15028,7 @@ _LASER_ATTACK_MAIN:
             jr      z,$9204
             ld      h,c
             nop
-_LASER_ATTACK_ATTRACT:
-            DB      _ENTER
+            rst     $08
             ld      (hl),$91
             xor     h
             adc     a,h
@@ -15095,10 +15066,9 @@ _LASER_ATTACK_ATTRACT:
             ld      h,c
             nop
             ld      a,l
-GALAXIANS_MODULE:
-            DB      $A5                 ; Mission module marker
-            DW      _GALAXIANS_MAIN
-            DW      _GALAXIANS_ATTRACT
+            and     l
+            call    nc,$F29D
+            sbc     a,l
 ;*******************************************************************************
 ; GALAXIANS_FORMATION_ALIEN_A_1
 ; 2 bytes/row = 8 pixels wide, 11 rows
@@ -16028,7 +15998,7 @@ GALAXIANS_SHIELD_SHIP_4:
             inc     bc
             ld      hl,$9786
             ld      iy,$D0E1
-            jp      $0FAC
+            jp      bmusic
             di
             ld      a,($D9AB)
             and     a
@@ -16116,7 +16086,7 @@ GALAXIANS_SHIELD_SHIP_4:
             cpl
             ld      (ix+$18),a
             ld      a,(ix+$17)
-            call    $3A6C
+            call    aabs
             and     $0E
             cp      $06
             jp      c,$987C
@@ -17137,8 +17107,7 @@ GALAXIANS_SHIELD_SHIP_4:
             nop
             ld      h,c
             nop
-_GALAXIANS_MAIN:
-            DB      _ENTER
+            rst     $08
             push    hl
             sbc     a,e
             inc     a
@@ -17162,8 +17131,7 @@ _GALAXIANS_MAIN:
             jr      z,$9E27
             ld      h,c
             nop
-_GALAXIANS_ATTRACT:
-            DB      _ENTER
+            rst     $08
             push    hl
             sbc     a,e
             halt
@@ -17222,10 +17190,11 @@ _GALAXIANS_ATTRACT:
             jr      z,$9E68
             ld      h,c
             nop
-SPACE_WARP_MODULE:
-            DB      $A5                 ; Mission module marker
-            DW      _SPACE_WARP_MAIN
-            DW      _SPACE_WARP_ATTRACT
+            and     l
+            ld      (de),a
+            and     (hl)
+            ld      c,e
+            and     (hl)
 ;*******************************************************************************
 ; SPACE_WARP_OBJECT_A_LARGE
 ; 3 bytes/row = 12 pixels wide, 11 rows
@@ -18677,8 +18646,7 @@ SPACE_WARP_WHITE_OBJECT_LARGE_2:
             inc     bc
             call    m,$61A5
             nop
-_SPACE_WARP_MAIN:
-            DB      _ENTER
+            rst     $08
             ld      c,d
             and     l
             add     hl,bc
@@ -18726,8 +18694,7 @@ _SPACE_WARP_MAIN:
             jr      z,$A680
             ld      h,c
             nop
-_SPACE_WARP_ATTRACT:
-            DB      _ENTER
+            rst     $08
             ld      c,d
             and     l
             ld      l,l
@@ -18822,10 +18789,11 @@ _SPACE_WARP_ATTRACT:
             nop
             ld      d,b
             rst     $38
-FLAG_SHIP_MODULE:
-            DB      $A5                 ; Mission module marker
-            DW      _FLAG_SHIP_MAIN
-            DW      _FLAG_SHIP_ATTRACT
+            and     l
+            sub     (hl)
+            or      d
+            cp      (hl)
+            or      d
             ld      b,$40
             nop
             nop
@@ -20904,8 +20872,7 @@ FLAG_SHIP_FIREBALL_FULL:
             ld      ($B116),a
             ld      h,c
             nop
-_FLAG_SHIP_MAIN:
-            DB      _ENTER
+            rst     $08
             add     a,c
             or      c
             and     a
@@ -20941,8 +20908,7 @@ _FLAG_SHIP_MAIN:
             jr      z,$B2F3
             ld      h,c
             nop
-_FLAG_SHIP_ATTRACT:
-            DB      _ENTER
+            rst     $08
             add     a,c
             or      c
             halt
@@ -20980,12 +20946,14 @@ _FLAG_SHIP_ATTRACT:
             ld      h,c
             nop
             and     d
-MISSION_MODULE_TABLE:
-            DW      ASTRO_BATTLES_MODULE
-            DW      LASER_ATTACK_MODULE
-            DW      GALAXIANS_MODULE
-            DW      SPACE_WARP_MODULE
-            DW      FLAG_SHIP_MODULE
+            nop
+            add     a,b
+            jp      nc,$FA8A
+            sub     c
+            inc     sp
+            sbc     a,(hl)
+            cp      d
+            and     (hl)
             nop
             ld      (hl),l
             call    m,$004A
@@ -21080,7 +21048,7 @@ W_B365:
             DW      _Bat
             DW      _1minus
             DW      _ARRAY
-            DW      MISSION_MODULE_TABLE
+            DW      $B2E7
             DW      _at
             DW      _plus
             DW      _at
@@ -21531,8 +21499,6 @@ W_B66A:
             DB      $02
             DW      _RETURN
 ;******************************************************************************************
-; ----> W_B68E   True when SETTINGS bit 6 is clear.
-;******************************************************************************************
 W_B68E:
             DB      _ENTER
             DW      _LITbyte
@@ -21543,10 +21509,6 @@ W_B68E:
             DW      _AND
             DW      _zeroequal
             DW      _RETURN
-;******************************************************************************************
-; ----> W_B69D   When SETTINGS bit 6 is clear, initialize COINSIN to four.
-;                This released-ROM body differs from the conditional source
-;                form that selected GSAB+3 through DOIT.
 ;******************************************************************************************
 W_B69D:
             DB      _ENTER
@@ -23162,12 +23124,12 @@ LBDA5:      DW      _RETURN             ; RETURN - gets RSP value and goes to it
 ;#########################################################################
 
 ;******************************************************************************************
-; ----> LBF2D       Game Over Sequence (GOS). Sets the DEMOMODE flag, resets player
+; ----> GOS         Game Over Sequence. Sets the DEMOMODE flag, resets player
 ;                   variables, checks the hardware settings for music/sound,
 ;                   silences the audio, and begins checking for coins to
 ;                   either start a game or loop the Attract Mode.
 ;******************************************************************************************
-LBF2D:              DB      _ENTER              ; Enter TERSE execution
+_GOS:               DB      _ENTER              ; Enter TERSE execution
                     DW      _LIT            ;
                     DW      DEMOMODE            ; / Push address of DEMOMODE ($D001)
                     DW      _P1                 ; WPBONE (Write Protect 1 - Sets Game Over flag)
@@ -23197,7 +23159,7 @@ gos_setmus:         DW      _LIT            ;
                     DW      _LIT            ;
                     DW      SKILLFACTOR         ; / Push address of SKILLFACTOR ($D037)
                     DW      _P0                 ; WPBZERO (Write Protect 0 - Reset Rank)
-                    DW      W_B69D              ; [RELEASED ROM] Apply SETTINGS bit-6 coin initialization
+                    DW      W_B69D              ; [ROM PATCH] Unknown vector call (Likely GSAB DOIT)
                     DW      GOSHOW              ; GOSHOW (Title screen display routine at $BD4E)
                     DW      SHUTUP              ; SHUTUP (Silence audio hardware)
                     DW      _LIT            ;
@@ -23215,7 +23177,7 @@ gos_setmus:         DW      _LIT            ;
 ;#########################################################################
 
 ;******************************************************************************************
-; ----> LBF74       Continuation of the Game Over Sequence (GOS) starting at LBF2D.
+; ----> LBF74       Continuation of the Game Over Sequence (GOS) starting at _GOS ($BF2D).
 ;                   Checks the coin/start flags. If zero, it enters the game's
 ;                   Attract Mode loop. The DO..LOOP cycles from 1 to 5, setting the
 ;                   MISSION variable to each number to briefly show every game screen.
@@ -23255,7 +23217,7 @@ gos_loop:           DW      _I                  ; I (Fetch current loop index 1-
 ;******************************************************************************************
 ; Z80 Vector / Jump table snippet
 ;******************************************************************************************
-LBFAA:              ld      bc, LBF2D           ; Load BC with address of GOS routine ($BF2D)
+LBFAA:              ld      bc, _GOS            ; Load BC with address of GOS routine ($BF2D)
                     jp      $B54F               ; Jump to unknown handler
 
 
@@ -23303,7 +23265,7 @@ _RESTART:
 play_one:   DW      LB900               ; PLAY1 (Launch Player 1 routine at LB900)
 
 go_gos:     DW      LB35C               ; [ROM PATCH] Unknown routine call
-            DW      LBF2D               ; GOS (Game Over Sequence at LBF2D)
+            DW      _GOS                ; GOS (Game Over Sequence at $BF2D)
             DW      _RETURN             ; ; (End of RESTART routine)
 
 ;****************************************************************************************

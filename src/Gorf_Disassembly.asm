@@ -21600,7 +21600,9 @@ WS0:        ld      a,(de)
             DW      _DSPATCH
 
 ;******************************************************************************************
-W_B71C:
+; get byte at $DDA0
+;******************************************************************************************
+READ_DDA0:
             DB      _ENTER
             DW      _LIT
             DW      $DDA0
@@ -21697,13 +21699,13 @@ geths1:     DW      SCANHST             ; Check to see if score makes table
 ;******************************************************************************************
 W_B7AD:
             DB      _ENTER
-            DW      W_B71C
+            DW      READ_DDA0
             DW      _0BRANCH
             DW      $B7CD
             DW      _LITbyte
             DB      $80
             DW      _star
-            DW      W_B71C
+            DW      READ_DDA0
             DW      _SWAP
             DW      _minussign
             DW      _LIT
@@ -21731,7 +21733,7 @@ W_B7D1:
             DW      _equal
             DW      _0BRANCH
             DW      $B7FE
-            DW      W_B71C
+            DW      READ_DDA0
             DW      _LIT
             DW      $7800
             DW      _LIT
@@ -21750,7 +21752,7 @@ W_B7D1:
             DW      _equal
             DW      _0BRANCH
             DW      $B81D
-            DW      W_B71C
+            DW      READ_DDA0
             DW      _LIT
             DW      $7800
             DW      _LIT
@@ -21778,7 +21780,7 @@ W_B81F:
 ;******************************************************************************************
 W_B834:
             DB      _ENTER
-            DW      W_B71C
+            DW      READ_DDA0
             DW      _LIT
             DW      $0428
             DW      _ROT
@@ -21796,7 +21798,7 @@ W_B845:
             DB      $05
             DW      _0
             DW      _DO
-            DW      W_B71C
+            DW      READ_DDA0
             DW      _LIT
             DW      $4B00
             DW      _LIT
@@ -22049,55 +22051,40 @@ W_B9B3:
             DW      $B9B4
             DW      _RETURN
 ;******************************************************************************************
+W_BA0A:
+            DB      _ENTER
+            DW      _LIT
+            DW      COINSIN
+            DW      _Bat
+            DW      _1
+            DW      _gt
+            DW      _0BRANCH
+            DW      $BA43
+            DW      W_B6AF
+            DW      W_B66A
+            DW      _DUP
+            DW      _LIT
+            DW      COINSIN
+            DW      _PSUB
+            DW      _LIT
+            DW      INITFB
+            DW      _PWB
+            DW      _LIT
+            DW      P1FBCTR
+            DW      _PWB
+            DW      _LIT
+            DW      P2FBCTR
+            DW      _PWB
+            DW      _LIT
+            DW      NPLAYERS
+            DW      _P1
+            DW      _LIT
+            DW      W_B9B3
+            DW      $B55D
+            DW      _RETURN
 
-            rst     $08
-            ld      l,l
-            nop
-            inc     bc
-            ret     nc
-            ret     p
-            nop
-            sbc     a,(hl)
-            nop
-            jp      c,$EA01
-            inc     bc
-            ld      b,e
-            cp      d
-            xor     a
-            or      (hl)
-            ld      l,d
-            or      (hl)
-            and     h
-            nop
-            ld      l,l
-            nop
-            inc     bc
-            ret     nc
-            sub     c
-            ld      d,$6D
-            nop
-            ld      a,($60D0)
-            ld      d,$6D
-            nop
-            ld      ($60D0),a
-            ld      d,$6D
-            nop
-            inc     sp
-            ret     nc
-            ld      h,b
-            ld      d,$6D
-            nop
-            add     hl,sp
-            ret     nc
-            ld      h,a
-            ld      d,$6D
-            nop
-            or      e
-            cp      c
-            ld      e,l
-            or      l
-            ld      h,c
-            nop
+;******************************************************************************************
+
             exx
             pop     hl
             ld      a,l

@@ -80,8 +80,9 @@ COLDSTRT:   nop
 
 ;******************************************************************************************
 ; ----> ENTER   Enters Terse mode via RST $08 ($CF).
-;               Pushes the current processor state onto the IX (return/loop) stack,
-;               saves the return address, and sets up execution.
+;               Saves the current TERSE BC continuation on the shared IX
+;               return/control stack, then loads BC with the colon word body.
+;               It does not save the general Z80 processor state.
 ;******************************************************************************************
 
 _ENTER      EQU     $CF                 ; $CF is hex for RST $08.
@@ -4020,7 +4021,7 @@ musicin:    ret
 
 ;******************************************************************************************
 
-L1009:      exx                         ; TERSE CODE
+_EMUSIC:    exx                         ; TERSE CODE; first music processor array
             ld      de,$D0B1            ; Why load value and then add to it?
             ld      hl,$002F            ; resulting address is $D0E0
             add     hl,de
@@ -4033,7 +4034,7 @@ L1009:      exx                         ; TERSE CODE
 
 ;******************************************************************************************
 
-            pop     hl
+_BMUSIC:    pop     hl
             push    iy
             ld      iy,$D0B1
             call    $0FAC
@@ -4042,7 +4043,7 @@ L1009:      exx                         ; TERSE CODE
 
 ;******************************************************************************************
 
-            pop     hl
+PMUSIC:     pop     hl
             push    iy
             ld      iy,$D0B1
             call    $0FC2
@@ -4051,7 +4052,7 @@ L1009:      exx                         ; TERSE CODE
 
 ;******************************************************************************************
 
-            pop     hl
+_MMUSIC:    pop     hl
             pop     de
             push    iy
             ld      iy,$D0B1
@@ -4061,7 +4062,7 @@ L1009:      exx                         ; TERSE CODE
 
 ;******************************************************************************************
 
-            pop     hl
+_MPMUSIC:   pop     hl
             pop     de
             push    iy
             ld      iy,$D0B1
@@ -4142,7 +4143,7 @@ _MP2MUSIC:  pop     hl
 ;   : SHUTUP EMUSIC E2MUSIC ; -->
 ;##########################################################################################
 SHUTUP:     DB      _ENTER
-            DW      L1009
+            DW      _EMUSIC
             DW      _E2MUSIC
             DW      _RETURN
 
@@ -4189,7 +4190,7 @@ _BZERO:     pop     hl
 ;
 ;******************************************************************************************
 
-                ; No code. DEFINITIONS???
+                ; Compile-time vocabulary selection; no emitted runtime body.
 
 ;******************************************************************************************
 ;
@@ -4225,7 +4226,9 @@ _BZERO:     pop     hl
 ; CC? IFTRUE HERE there ! DP ! TERSE DEFINITIONS IFEND
 ;******************************************************************************************
 
-                ; No code. NOT UNDERSTOOD???
+                ; PRIM and ENDPRIM are compile-time helpers. They construct a
+                ; length-prefixed speech primitive and patch its leading size
+                ; byte, so no standalone runtime code is expected here.
 
 ;##########################################################################################
 ; SUBR speaklink .REL 10 IN, 80 ANI, RZ,
@@ -4258,8 +4261,8 @@ speaklink:  in      a,($10)
 ;##########################################################################################
 speak:      in      a,($13)
             and     $08
-            jp      nz,speaklink
-            jp      $C000
+            jp      nz,speaklink        ; Resident Votrax queue path
+            jp      $C000               ; Foreign X11 speech provider entry
 
 ;########################################################################################
 ; CODE SPEAK D POP, speak CALL, NEXT
@@ -4885,7 +4888,7 @@ DONULL:     DB      _ENTER
 ; XY 100 * SWAP 40 * SWAP ;
 ;******************************************************************************************
 
-            DB      _ENTER
+_XY:        DB      _ENTER
             DW      _LIT
             DW      $0100
             DW      _star
@@ -4899,14 +4902,15 @@ DONULL:     DB      _ENTER
 
             DW      _RETURN
 
-            DW      $E9E1
+_DOIT:      pop     hl                  ; TERSE's EXECUTE-like indirect call
+            jp      (hl)
             DW      _DSPATCH
 ;******************************************************************************************
 ; {Block 105 } ... Continued
 ; INIT GRAPHICS 1 8 OUTP 204 10 OUTP 43 9 OUTP ;
 ;******************************************************************************************
 
-W_1476:
+_INIT:
             DB      _ENTER
             DW      DONULL		; do nothing ?
             DW      _1                  ; OUT $01 to port $08 (Hi-Res)
@@ -11835,11 +11839,10 @@ showport:   exx
 
             ORG     $8000
 
-L8000:      and     l
-            ld      h,e
-            adc     a,d
-            add     a,(hl)
-            adc     a,d
+ASTRO_BATTLES_MODULE:
+            DB      $A5                 ; Mission module marker
+            DW      _ASTRO_BATTLES_MAIN
+            DW      _ASTRO_BATTLES_ATTRACT
 ;*******************************************************************************
 ; ASTRO_BATTLES_ALIEN_A_1
 ; 2 bytes/row = 8 pixels wide, 8 rows
@@ -13845,7 +13848,8 @@ ASTRO_BATTLES_INVADER_BULLET_2:
             inc     (hl)
             ld      h,c
             nop
-            rst     $08
+_ASTRO_BATTLES_MAIN:
+            DB      _ENTER
             sbc     a,a
             add     a,a
             ld      (hl),$89
@@ -13874,7 +13878,8 @@ ASTRO_BATTLES_INVADER_BULLET_2:
             adc     a,c
             ld      h,c
             nop
-            rst     $08
+_ASTRO_BATTLES_ATTRACT:
+            DB      _ENTER
             sbc     a,a
             add     a,a
             ld      l,$81
@@ -13943,10 +13948,11 @@ ASTRO_BATTLES_INVADER_BULLET_2:
             jr      z,$8B06
             ld      h,c
             nop
-            call    po,$A7A5
-            sub     c
-            rst     $08
-            sub     c
+            DB      $E4                 ; Byte preceding the module header
+LASER_ATTACK_MODULE:
+            DB      $A5                 ; Mission module marker
+            DW      _LASER_ATTACK_MAIN
+            DW      _LASER_ATTACK_ATTRACT
 ;*******************************************************************************
 ; LASER_ATTACK_RED_WINGED_BUG
 ; 3 bytes/row = 12 pixels wide, 11 rows
@@ -15014,7 +15020,8 @@ LASER_ATTACK_BUG_SHIP_COMPACT:
             adc     a,e
             jr      z,$9207
             nop
-            rst     $08
+_LASER_ATTACK_MAIN:
+            DB      _ENTER
             ld      (hl),$91
             xor     h
             adc     a,h
@@ -15049,7 +15056,8 @@ LASER_ATTACK_BUG_SHIP_COMPACT:
             jr      z,$9204
             ld      h,c
             nop
-            rst     $08
+_LASER_ATTACK_ATTRACT:
+            DB      _ENTER
             ld      (hl),$91
             xor     h
             adc     a,h
@@ -15087,9 +15095,10 @@ LASER_ATTACK_BUG_SHIP_COMPACT:
             ld      h,c
             nop
             ld      a,l
-            and     l
-            call    nc,$F29D
-            sbc     a,l
+GALAXIANS_MODULE:
+            DB      $A5                 ; Mission module marker
+            DW      _GALAXIANS_MAIN
+            DW      _GALAXIANS_ATTRACT
 ;*******************************************************************************
 ; GALAXIANS_FORMATION_ALIEN_A_1
 ; 2 bytes/row = 8 pixels wide, 11 rows
@@ -17128,7 +17137,8 @@ GALAXIANS_SHIELD_SHIP_4:
             nop
             ld      h,c
             nop
-            rst     $08
+_GALAXIANS_MAIN:
+            DB      _ENTER
             push    hl
             sbc     a,e
             inc     a
@@ -17152,7 +17162,8 @@ GALAXIANS_SHIELD_SHIP_4:
             jr      z,$9E27
             ld      h,c
             nop
-            rst     $08
+_GALAXIANS_ATTRACT:
+            DB      _ENTER
             push    hl
             sbc     a,e
             halt
@@ -17211,11 +17222,10 @@ GALAXIANS_SHIELD_SHIP_4:
             jr      z,$9E68
             ld      h,c
             nop
-            and     l
-            ld      (de),a
-            and     (hl)
-            ld      c,e
-            and     (hl)
+SPACE_WARP_MODULE:
+            DB      $A5                 ; Mission module marker
+            DW      _SPACE_WARP_MAIN
+            DW      _SPACE_WARP_ATTRACT
 ;*******************************************************************************
 ; SPACE_WARP_OBJECT_A_LARGE
 ; 3 bytes/row = 12 pixels wide, 11 rows
@@ -18667,7 +18677,8 @@ SPACE_WARP_WHITE_OBJECT_LARGE_2:
             inc     bc
             call    m,$61A5
             nop
-            rst     $08
+_SPACE_WARP_MAIN:
+            DB      _ENTER
             ld      c,d
             and     l
             add     hl,bc
@@ -18715,7 +18726,8 @@ SPACE_WARP_WHITE_OBJECT_LARGE_2:
             jr      z,$A680
             ld      h,c
             nop
-            rst     $08
+_SPACE_WARP_ATTRACT:
+            DB      _ENTER
             ld      c,d
             and     l
             ld      l,l
@@ -18810,11 +18822,10 @@ SPACE_WARP_WHITE_OBJECT_LARGE_2:
             nop
             ld      d,b
             rst     $38
-            and     l
-            sub     (hl)
-            or      d
-            cp      (hl)
-            or      d
+FLAG_SHIP_MODULE:
+            DB      $A5                 ; Mission module marker
+            DW      _FLAG_SHIP_MAIN
+            DW      _FLAG_SHIP_ATTRACT
             ld      b,$40
             nop
             nop
@@ -20893,7 +20904,8 @@ FLAG_SHIP_FIREBALL_FULL:
             ld      ($B116),a
             ld      h,c
             nop
-            rst     $08
+_FLAG_SHIP_MAIN:
+            DB      _ENTER
             add     a,c
             or      c
             and     a
@@ -20929,7 +20941,8 @@ FLAG_SHIP_FIREBALL_FULL:
             jr      z,$B2F3
             ld      h,c
             nop
-            rst     $08
+_FLAG_SHIP_ATTRACT:
+            DB      _ENTER
             add     a,c
             or      c
             halt
@@ -20967,14 +20980,12 @@ FLAG_SHIP_FIREBALL_FULL:
             ld      h,c
             nop
             and     d
-            nop
-            add     a,b
-            jp      nc,$FA8A
-            sub     c
-            inc     sp
-            sbc     a,(hl)
-            cp      d
-            and     (hl)
+MISSION_MODULE_TABLE:
+            DW      ASTRO_BATTLES_MODULE
+            DW      LASER_ATTACK_MODULE
+            DW      GALAXIANS_MODULE
+            DW      SPACE_WARP_MODULE
+            DW      FLAG_SHIP_MODULE
             nop
             ld      (hl),l
             call    m,$004A
@@ -21069,7 +21080,7 @@ W_B365:
             DW      _Bat
             DW      _1minus
             DW      _ARRAY
-            DW      $B2E7
+            DW      MISSION_MODULE_TABLE
             DW      _at
             DW      _plus
             DW      _at
@@ -21520,6 +21531,8 @@ W_B66A:
             DB      $02
             DW      _RETURN
 ;******************************************************************************************
+; ----> W_B68E   True when SETTINGS bit 6 is clear.
+;******************************************************************************************
 W_B68E:
             DB      _ENTER
             DW      _LITbyte
@@ -21530,6 +21543,10 @@ W_B68E:
             DW      _AND
             DW      _zeroequal
             DW      _RETURN
+;******************************************************************************************
+; ----> W_B69D   When SETTINGS bit 6 is clear, initialize COINSIN to four.
+;                This released-ROM body differs from the conditional source
+;                form that selected GSAB+3 through DOIT.
 ;******************************************************************************************
 W_B69D:
             DB      _ENTER
@@ -23180,7 +23197,7 @@ gos_setmus:         DW      _LIT            ;
                     DW      _LIT            ;
                     DW      SKILLFACTOR         ; / Push address of SKILLFACTOR ($D037)
                     DW      _P0                 ; WPBZERO (Write Protect 0 - Reset Rank)
-                    DW      W_B69D              ; [ROM PATCH] Unknown vector call (Likely GSAB DOIT)
+                    DW      W_B69D              ; [RELEASED ROM] Apply SETTINGS bit-6 coin initialization
                     DW      GOSHOW              ; GOSHOW (Title screen display routine at $BD4E)
                     DW      SHUTUP              ; SHUTUP (Silence audio hardware)
                     DW      _LIT            ;
